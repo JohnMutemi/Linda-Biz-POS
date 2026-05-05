@@ -1,0 +1,84 @@
+"use client"
+
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
+import Link from "next/link"
+import Image from "next/image"
+import { AuthForm } from "@/components/auth-form"
+
+export default function LoginPage() {
+  const [loading, setLoading] = useState(true)
+  const router = useRouter()
+
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const response = await fetch("/api/auth/session")
+        if (response.ok) {
+          const user = await response.json()
+          localStorage.setItem("lindabiz_user", JSON.stringify(user))
+          router.push("/dashboard")
+          return
+        }
+      } catch (error) {
+        console.error("Session check failed:", error)
+      }
+      setLoading(false)
+    }
+    void checkSession()
+  }, [router])
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-emerald-50 via-green-50 to-teal-100">
+        <div className="text-center">
+          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-emerald-600" />
+          <p className="text-emerald-700">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="relative min-h-screen overflow-hidden bg-emerald-50">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute left-[-140px] top-[-120px] h-[340px] w-[340px] rounded-full bg-emerald-300/40 blur-3xl" />
+        <div className="absolute bottom-[-100px] right-[-80px] h-[280px] w-[280px] rounded-full bg-emerald-300/40 blur-3xl" />
+      </div>
+
+      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[1240px] items-center px-4 py-8 md:px-8 md:py-10">
+        <div className="grid w-full items-center gap-6 rounded-3xl border border-emerald-100 bg-white/90 p-4 shadow-2xl shadow-emerald-200/40 backdrop-blur-sm md:gap-8 md:p-8 lg:grid-cols-2">
+          <div>
+            <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-700">
+              Account Access
+            </span>
+            <p className="mt-4 text-3xl font-bold text-slate-900">LindaBiz</p>
+            <p className="mt-1 text-sm text-emerald-700">Point of Sale System</p>
+            <p className="mt-5 max-w-sm text-sm text-slate-600">
+              Welcome back. Sign in to access your dashboard, manage inventory, and track daily sales.
+            </p>
+            <Link href="/" className="mt-4 inline-block text-sm font-medium text-emerald-600 hover:text-emerald-500">
+              Back Home
+            </Link>
+
+            <div className="relative mt-5 w-full rounded-3xl border border-emerald-100 bg-white/80 p-3 shadow-2xl shadow-emerald-200/40 backdrop-blur-sm">
+              <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl bg-emerald-50">
+                <Image
+                  src="/api/landing-desktop-image?v=desktop-clean"
+                  alt="Desktop appearance"
+                  fill
+                  className="object-contain object-center"
+                  unoptimized
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-emerald-100 bg-white/95 p-1 shadow-lg shadow-emerald-100/70">
+            <AuthForm />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
