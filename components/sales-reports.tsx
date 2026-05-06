@@ -28,11 +28,10 @@ interface Sale {
 
 interface SalesReportsProps {
   userId: string
-  userType: "general" | "wines-spirits"
   businessName: string
 }
 
-export function SalesReports({ userId, userType, businessName }: SalesReportsProps) {
+export function SalesReports({ userId, businessName }: SalesReportsProps) {
   const [sales, setSales] = useState<Sale[]>([])
   const [filteredSales, setFilteredSales] = useState<Sale[]>([])
   const [filterType, setFilterType] = useState<"today" | "week" | "month" | "custom">("today")

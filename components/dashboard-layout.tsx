@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { LayoutDashboard, Package, ShoppingCart, Settings, Store, Wine, Menu, X, LogOut } from "lucide-react"
+import { LayoutDashboard, Package, ShoppingCart, Settings, Store, Menu, X, LogOut } from "lucide-react"
 import { useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
 
@@ -46,11 +46,7 @@ export function DashboardLayout({ children, user }: DashboardLayoutProps) {
         <div className="fixed inset-y-0 left-0 flex w-64 flex-col bg-white shadow-xl">
           <div className="flex h-16 items-center justify-between px-4 border-b">
             <div className="flex items-center space-x-2">
-              {user.userType === "general" ? (
-                <Store className="h-8 w-8 text-blue-600" />
-              ) : (
-                <Wine className="h-8 w-8 text-purple-600" />
-              )}
+              <Store className="h-8 w-8 text-blue-600" />
               <span className="text-xl font-bold">LindaBiz</span>
             </div>
             <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)}>
@@ -96,11 +92,7 @@ export function DashboardLayout({ children, user }: DashboardLayoutProps) {
         <div className="flex flex-col flex-grow bg-white border-r border-gray-200 shadow-sm">
           <div className="flex h-16 items-center px-4 border-b">
             <div className="flex items-center space-x-2">
-              {user.userType === "general" ? (
-                <Store className="h-8 w-8 text-blue-600" />
-              ) : (
-                <Wine className="h-8 w-8 text-purple-600" />
-              )}
+              <Store className="h-8 w-8 text-blue-600" />
               <span className="text-xl font-bold">LindaBiz</span>
             </div>
           </div>
@@ -148,9 +140,7 @@ export function DashboardLayout({ children, user }: DashboardLayoutProps) {
 
           <div className="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
             <div className="flex items-center gap-x-4 lg:gap-x-6">
-              <h1 className="text-xl font-semibold text-gray-900">
-                {user.userType === "general" ? "General Shop Dashboard" : "Wines & Spirits Dashboard"}
-              </h1>
+              <h1 className="text-xl font-semibold text-gray-900">Dashboard</h1>
             </div>
           </div>
         </div>

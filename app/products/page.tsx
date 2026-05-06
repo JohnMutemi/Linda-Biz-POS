@@ -9,12 +9,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Edit, Trash2, Package, Zap, ShoppingBag, Search, Sparkles } from "lucide-react"
+import { Plus, Edit, Trash2, Package, ShoppingBag, Search, Sparkles } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/components/ui/use-toast"
 import { BackToDashboardButton } from "@/components/dashboard/back-to-dashboard-button"
 import { DashboardPageShell } from "@/components/dashboard/page-shell"
+import { isLowStock, isOutOfStock, reorderThreshold } from "@/lib/inventory-stock"
 
 interface Product {
   id: string
@@ -148,6 +149,8 @@ export default function ProductsPage() {
     { name: "Viceroy", category: "Wine", suggestedPrice: 500, unit: "bottle" },
     { name: "Chamdor", category: "Wine", suggestedPrice: 400, unit: "bottle" },
   ]
+
+  const popularQuickAddItems: PopularItem[] = [...popularGeneralItems, ...popularWineSpiritsItems]
 
   const loadProducts = useCallback(async (userId: string) => {
     try {
@@ -340,13 +343,15 @@ export default function ProductsPage() {
   }
 
   const handleItemSelect = (item: PopularItem) => {
-    setFormData({
+    setFormData((prev) => ({
       name: item.name,
       price: item.suggestedPrice.toString(),
       quantity: "10", // Default quantity
       unit: item.unit,
       category: item.category,
-    })
+      description: "",
+      reorderLevel: prev.reorderLevel || "5",
+    }))
     setShowPopularItems(false)
     toast({
       title: "Item selected",
@@ -359,6 +364,9 @@ export default function ProductsPage() {
       "Food",
       "Dairy",
       "Beverages",
+      "Beer",
+      "Wine",
+      "Spirits",
       "Electronics",
       "Household",
       "Personal Care",
@@ -369,17 +377,10 @@ export default function ProductsPage() {
   }
 
   const getDefaultUnits = () => {
-    if (user?.userType === "wines-spirits") {
-      return ["bottle", "case", "liter"]
-    }
-    return ["piece", "kg", "gram", "liter", "packet", "box", "bottle", "tube", "roll", "jar", "pair"]
+    return ["piece", "kg", "gram", "liter", "packet", "box", "bottle", "case", "tube", "roll", "jar", "pair"]
   }
 
-  const getPopularItems = () => {
-    return user?.userType === "wines-spirits" ? popularWineSpiritsItems : popularGeneralItems
-  }
-
-  const filteredItems = getPopularItems().filter(
+  const filteredItems = popularQuickAddItems.filter(
     (item) => formData.category === "" || item.category === formData.category,
   )
   const filteredProducts = products.filter((product) => {
@@ -528,13 +529,9 @@ export default function ProductsPage() {
                       </thead>
                       <tbody>
                         {filteredProducts.map((product, rowIdx) => {
-                          const reorder = product.reorderLevel ?? 5
+                          const rl = reorderThreshold(product)
                           const status =
-                            product.quantity === 0
-                              ? "out"
-                              : product.quantity > 0 && product.quantity <= reorder
-                                ? "low"
-                                : "ok"
+                            isOutOfStock(product) ? "out" : isLowStock(product) ? "low" : "ok"
                           return (
                             <tr
                               key={product.id}
@@ -555,9 +552,7 @@ export default function ProductsPage() {
                               <td className="px-4 py-3 align-top whitespace-nowrap tabular-nums text-emerald-900">
                                 KSh {product.price.toLocaleString()}
                               </td>
-                              <td className="px-4 py-3 align-top whitespace-nowrap text-emerald-700 tabular-nums">
-                                {product.reorderLevel ?? 5}
-                              </td>
+                              <td className="px-4 py-3 align-top whitespace-nowrap text-emerald-700 tabular-nums">{rl}</td>
                               <td className="px-4 py-3 align-top">
                                 <Badge
                                   variant={status === "out" ? "destructive" : "outline"}
@@ -633,30 +628,22 @@ export default function ProductsPage() {
           {!editingProduct && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium text-emerald-900">
-                  {user.userType === "wines-spirits" ? "Quick Add Popular Brands" : "Quick Add Popular Items"}
-                </h3>
+                <h3 className="text-lg font-medium text-emerald-900">Quick Add Popular Items</h3>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setShowPopularItems(!showPopularItems)}
                   className="border-emerald-200 hover:bg-emerald-50"
                 >
-                  {user.userType === "wines-spirits" ? (
-                    <Zap className="mr-2 h-4 w-4" />
-                  ) : (
-                    <ShoppingBag className="mr-2 h-4 w-4" />
-                  )}
-                  {showPopularItems ? "Hide" : "Show"} {user.userType === "wines-spirits" ? "Brands" : "Items"}
+                  <ShoppingBag className="mr-2 h-4 w-4" />
+                  {showPopularItems ? "Hide" : "Show"} Items
                 </Button>
               </div>
 
               {showPopularItems && (
                 <Card className="bg-emerald-50/50 border-emerald-200">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-sm text-emerald-800">
-                      {user.userType === "wines-spirits" ? "Popular Brands" : "Popular Shop Items"}
-                    </CardTitle>
+                    <CardTitle className="text-sm text-emerald-800">Starter catalogue shortcuts</CardTitle>
                     <CardDescription className="text-emerald-600">
                       Click to auto-fill the form. Saving will add to an existing line when the product name matches (same
                       item, trimmed) — quantity is increased instead of creating a duplicate.

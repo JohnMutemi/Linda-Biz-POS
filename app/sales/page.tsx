@@ -506,7 +506,7 @@ export default function SalesPage() {
 
         {/* Sales Reports Section */}
         <div className="mt-6">
-          <SalesReports userId={user.id} userType={user.userType} businessName={user.businessName} />
+          <SalesReports userId={user.id} businessName={user.businessName} />
         </div>
       </DashboardPageShell>
     </div>

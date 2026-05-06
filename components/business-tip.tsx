@@ -5,10 +5,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Lightbulb, RefreshCw, X } from "lucide-react"
 
-interface BusinessTipProps {
-  userType: "general" | "wines-spirits"
-}
-
 const GENERAL_SHOP_TIPS = [
   "Keep your most popular items at eye level to increase sales.",
   "Track your inventory daily to avoid running out of bestsellers.",
@@ -55,22 +51,23 @@ const WINES_SPIRITS_TIPS = [
   "Consider offering corporate packages for office parties and events.",
 ]
 
-export function BusinessTip({ userType }: BusinessTipProps) {
+const BUSINESS_TIPS = [...GENERAL_SHOP_TIPS, ...WINES_SPIRITS_TIPS]
+
+export function BusinessTip() {
   const [tip, setTip] = useState("")
   const [isVisible, setIsVisible] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
 
   const generateTip = useCallback(() => {
     setIsLoading(true)
-    const tips = userType === "wines-spirits" ? WINES_SPIRITS_TIPS : GENERAL_SHOP_TIPS
-    const randomTip = tips[Math.floor(Math.random() * tips.length)]
+    const randomTip = BUSINESS_TIPS[Math.floor(Math.random() * BUSINESS_TIPS.length)]
 
     // Simulate loading for better UX
     setTimeout(() => {
       setTip(randomTip)
       setIsLoading(false)
     }, 500)
-  }, [userType])
+  }, [])
 
   useEffect(() => {
     // Check if user has seen a tip today
@@ -133,9 +130,7 @@ export function BusinessTip({ userType }: BusinessTipProps) {
             </Button>
           </div>
         </div>
-        <CardDescription className="text-emerald-600 text-xs">
-          {userType === "wines-spirits" ? "For Wines & Spirits Vendors" : "For General Shop Owners"}
-        </CardDescription>
+        <CardDescription className="text-emerald-600 text-xs">Ideas for running your business</CardDescription>
       </CardHeader>
       <CardContent className="pt-0">
         {isLoading ? (

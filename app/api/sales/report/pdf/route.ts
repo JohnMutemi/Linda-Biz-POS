@@ -70,17 +70,28 @@ export async function GET(request: Request) {
       rangeEnd = end ? endOfDay(end) : null
     }
 
-    const sql = await db()
+    const neonSql = await db()
+
+    const [bizRow] = await neonSql`
+      SELECT business_name
+      FROM users
+      WHERE id = ${userId}
+      LIMIT 1
+    `
+    const businessName =
+      bizRow && typeof (bizRow as { business_name?: unknown }).business_name === "string"
+        ? String((bizRow as { business_name: string }).business_name).trim()
+        : ""
 
     const salesRows =
       rangeStart && rangeEnd
-        ? await sql`
+        ? await neonSql`
             SELECT id, total, item_count, date
             FROM sales
             WHERE user_id = ${userId} AND date >= ${rangeStart.toISOString()} AND date <= ${rangeEnd.toISOString()}
             ORDER BY date DESC
           `
-        : await sql`
+        : await neonSql`
             SELECT id, total, item_count, date
             FROM sales
             WHERE user_id = ${userId}
@@ -91,10 +102,10 @@ export async function GET(request: Request) {
     const itemsRows =
       saleIds.length === 0
         ? []
-        : await sql`
+        : await neonSql`
             SELECT sale_id, product_name, quantity
             FROM sale_items
-            WHERE sale_id IN ${sql(saleIds)}
+            WHERE sale_id = ANY(${saleIds})
             ORDER BY id ASC
           `
 
@@ -116,13 +127,17 @@ export async function GET(request: Request) {
     const title = "Sales Report"
     page.drawText(title, { x: margin, y, size: 18, font: fontBold, color: rgb(0.02, 0.43, 0.25) })
     y -= 24
+    if (businessName) {
+      page.drawText(`Business: ${businessName}`, { x: margin, y, size: 11, font: fontBold, color: rgb(0.06, 0.1, 0.17) })
+      y -= 16
+    }
     page.drawText(`Generated: ${new Date().toLocaleString()}`, { x: margin, y, size: 10, font, color: rgb(0.2, 0.2, 0.2) })
     y -= 16
     page.drawText(`Transactions: ${totalTransactions}`, { x: margin, y, size: 11, font })
     y -= 14
     page.drawText(`Items sold: ${totalItems}`, { x: margin, y, size: 11, font })
     y -= 14
-    page.drawText(`Revenue: KSh ${Math.round(totalRevenue).toLocaleString()}`, { x: margin, y, size: 11, fontBold })
+    page.drawText(`Revenue: KSh ${Math.round(totalRevenue).toLocaleString()}`, { x: margin, y, size: 11, font: fontBold })
     y -= 14
     page.drawText(`Average sale: KSh ${Math.round(average).toLocaleString()}`, { x: margin, y, size: 11, font })
 
@@ -164,7 +179,7 @@ export async function GET(request: Request) {
       filterType === "custom" && startDateRaw && endDateRaw ? `${startDateRaw}_to_${endDateRaw}` : filterType
     const filename = `sales-report_${periodText}_${new Date().toISOString().split("T")[0]}.pdf`
 
-    return new NextResponse(pdfBytes, {
+    return new NextResponse(Buffer.from(pdfBytes), {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",

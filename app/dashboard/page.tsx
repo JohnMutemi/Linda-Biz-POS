@@ -28,6 +28,7 @@ import { SalesHistory } from "@/components/sales-history"
 import { BusinessTip } from "@/components/business-tip"
 import { DashboardPageShell } from "@/components/dashboard/page-shell"
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts"
+import { isLowStock, reorderThreshold } from "@/lib/inventory-stock"
 
 interface Product {
   id: string
@@ -38,6 +39,7 @@ interface Product {
   category: string
   userType: "general" | "wines-spirits"
   userId: string
+  reorderLevel?: number
 }
 
 interface Sale {
@@ -89,7 +91,25 @@ export default function Dashboard() {
         if (!productsResponse.ok) {
           throw new Error("Failed to load products")
         }
-        const userProducts: Product[] = await productsResponse.json()
+        const rawProducts = await productsResponse.json()
+        const userProducts: Product[] = Array.isArray(rawProducts)
+          ? rawProducts.map((p: Record<string, unknown>) => ({
+              id: String(p.id),
+              name: String(p.name),
+              price: Number(p.price),
+              quantity: Number(p.quantity),
+              unit: String(p.unit ?? ""),
+              category: String(p.category ?? ""),
+              userType: p.userType as Product["userType"],
+              userId: String(p.userId),
+              reorderLevel:
+                p.reorderLevel != null && p.reorderLevel !== ""
+                  ? Number(p.reorderLevel)
+                  : p.reorder_level != null && p.reorder_level !== ""
+                    ? Number(p.reorder_level)
+                    : undefined,
+            }))
+          : []
         setProducts(userProducts)
 
         // Load sales with proper item counting
@@ -180,12 +200,24 @@ export default function Dashboard() {
   const count30 = recentSales.length
   const avgOrder30 = count30 ? revenue30 / count30 : 0
 
+  const categoryOverview = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const p of products) {
+      const label = p.category?.trim() || "Uncategorized"
+      counts.set(label, (counts.get(label) ?? 0) + 1)
+    }
+    return [...counts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 9)
+      .map(([title, count]) => ({ title, count }))
+  }, [products])
+
   if (loading || !user) {
     return <DashboardSkeleton />
   }
 
   const outOfStockItems = products.filter((product) => product.quantity === 0)
-  const lowStockItems = products.filter((product) => product.quantity > 0 && product.quantity <= 5)
+  const lowStockItems = products.filter(isLowStock)
   const stockAlerts = [...outOfStockItems, ...lowStockItems]
 
   const pieColors = DASHBOARD_PIE_COLORS
@@ -300,7 +332,7 @@ export default function Dashboard() {
                 <CardHeader>
                   <CardTitle className="text-amber-900">Low Stock</CardTitle>
                   <CardDescription className="text-amber-800">
-                    {lowStockItems.length} item{lowStockItems.length === 1 ? "" : "s"} are running low.
+                    {lowStockItems.length} item{lowStockItems.length === 1 ? "" : "s"} at or below their reorder level.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-2">
@@ -465,7 +497,7 @@ export default function Dashboard() {
               ) : (
                 <div className="space-y-3">
                   {products.slice(0, 5).map((product) => (
-                    <ProductItem key={product.id} product={product} userType={user.userType} />
+                    <ProductItem key={product.id} product={product} />
                   ))}
                 </div>
               )}
@@ -478,7 +510,7 @@ export default function Dashboard() {
             <CardHeader>
               <CardTitle className="text-emerald-900">Comprehensive Low Stock List</CardTitle>
               <CardDescription className="text-emerald-700">
-                Per product overview for all low and out-of-stock inventory items
+                Includes out-of-stock items and any SKU at or below its reorder level (per product settings).
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -494,6 +526,7 @@ export default function Dashboard() {
                         <th className="px-4 py-3 text-left font-semibold">Product</th>
                         <th className="px-4 py-3 text-left font-semibold">Category</th>
                         <th className="px-4 py-3 text-left font-semibold">Available</th>
+                        <th className="px-4 py-3 text-left font-semibold whitespace-nowrap">Reorder level</th>
                         <th className="px-4 py-3 text-left font-semibold">Unit Price</th>
                         <th className="px-4 py-3 text-left font-semibold">Status</th>
                       </tr>
@@ -501,21 +534,24 @@ export default function Dashboard() {
                     <tbody>
                       {stockAlerts.map((item, index) => {
                         const out = item.quantity === 0
+                        const rl = reorderThreshold(item)
+                        const atReorder = !out && item.quantity === rl
                         return (
                           <tr key={item.id} className={cn(index % 2 === 0 ? "bg-white" : "bg-emerald-50/30")}>
                             <td className="px-4 py-3 font-medium text-emerald-900">{item.name}</td>
                             <td className="px-4 py-3 text-emerald-700">{item.category}</td>
-                            <td className="px-4 py-3 text-emerald-700">
+                            <td className="px-4 py-3 text-emerald-700 tabular-nums">
                               {item.quantity} {item.unit}
                               {item.quantity === 1 ? "" : "s"}
                             </td>
+                            <td className="px-4 py-3 text-emerald-700 tabular-nums">{rl}</td>
                             <td className="px-4 py-3 text-emerald-700">KSh {item.price.toLocaleString()}</td>
                             <td className="px-4 py-3">
                               <Badge
                                 variant={out ? "destructive" : "outline"}
                                 className={out ? "" : "text-amber-700 border-amber-300 bg-amber-50"}
                               >
-                                {out ? "Out of Stock" : "Low Stock"}
+                                {out ? "Out of Stock" : atReorder ? "At reorder level" : "Below reorder level"}
                               </Badge>
                             </td>
                           </tr>
@@ -534,29 +570,20 @@ export default function Dashboard() {
           <SalesHistory userId={user.id} limit={5} />
         </div>
 
-        {/* Category Overview for Wines & Spirits */}
-        {user.userType === "wines-spirits" && (
+        {categoryOverview.length > 0 && (
           <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-            <CategoryCard
-              title="Wines"
-              count={products.filter((p) => p.category?.toLowerCase() === "wine").length}
-              icon={<Wine className="h-5 w-5 text-emerald-500" />}
-            />
-            <CategoryCard
-              title="Spirits"
-              count={products.filter((p) => p.category?.toLowerCase() === "spirits").length}
-              icon={<Package className="h-5 w-5 text-emerald-500" />}
-            />
-            <CategoryCard
-              title="Beers"
-              count={products.filter((p) => p.category?.toLowerCase() === "beer").length}
-              icon={<Beer className="h-5 w-5 text-emerald-500" />}
-            />
+            {categoryOverview.map(({ title, count }) => (
+              <CategoryCard
+                key={title}
+                title={title}
+                count={count}
+                icon={<Package className="h-5 w-5 text-emerald-500" />}
+              />
+            ))}
           </div>
         )}
 
-        {/* Business Tip of the Day */}
-        <BusinessTip userType={user.userType} />
+        <BusinessTip />
         </TabsContent>
 
         <TabsContent value="analytics" className="mt-0 space-y-6 ring-offset-0">
@@ -717,19 +744,19 @@ function CategoryCard({ title, count, icon }: { title: string; count: number; ic
   )
 }
 
-function ProductItem({ product, userType }: { product: Product; userType: "general" | "wines-spirits" }) {
+function ProductItem({ product }: { product: Product }) {
   const getStockStatus = () => {
     if (product.quantity === 0) {
       return { label: "Out of Stock", variant: "destructive" as const }
-    } else if (product.quantity <= 5) {
+    }
+    if (isLowStock(product)) {
       return {
-        label: "Low Stock",
+        label: product.quantity === reorderThreshold(product) ? "At reorder" : "Low stock",
         variant: "outline" as const,
         className: "text-amber-600 border-amber-300 bg-amber-50",
       }
-    } else {
-      return { label: "In Stock", variant: "default" as const }
     }
+    return { label: "In Stock", variant: "default" as const }
   }
 
   const status = getStockStatus()
@@ -750,7 +777,7 @@ function ProductItem({ product, userType }: { product: Product; userType: "gener
   return (
     <div className="flex items-center justify-between p-4 border border-emerald-100 rounded-lg hover:bg-emerald-50/50 bg-white/50">
       <div className="flex items-center space-x-3">
-        <div className={cn("p-2 rounded-full", userType === "general" ? "bg-emerald-50" : "bg-green-50")}>
+        <div className={cn("p-2 rounded-full bg-emerald-50")}>
           {getCategoryIcon()}
         </div>
         <div>

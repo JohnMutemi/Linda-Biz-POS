@@ -8,10 +8,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
 import {
   Store,
-  Wine,
   UserIcon,
   Mail,
   Phone,
@@ -197,8 +195,7 @@ export default function ProfilePage() {
             <CardContent className="flex flex-col items-center text-center">
               <div
                 className={cn(
-                  "h-24 w-24 rounded-full flex items-center justify-center text-2xl font-bold mb-4",
-                  user.userType === "general" ? "bg-blue-100 text-blue-700" : "bg-purple-100 text-purple-700",
+                  "h-24 w-24 rounded-full flex items-center justify-center text-2xl font-bold mb-4 bg-emerald-100 text-emerald-800",
                 )}
               >
                 {user.name.charAt(0).toUpperCase()}
@@ -207,18 +204,7 @@ export default function ProfilePage() {
               <h2 className="text-xl font-bold text-emerald-900">{user.name}</h2>
               <p className="text-emerald-600 mb-2">{user.email}</p>
 
-              <Badge
-                className={cn(
-                  "mb-4",
-                  user.userType === "general"
-                    ? "bg-blue-100 text-blue-700 hover:bg-blue-100"
-                    : "bg-purple-100 text-purple-700 hover:bg-purple-100",
-                )}
-              >
-                {user.userType === "general" ? "General Shop Owner" : "Wines & Spirits Vendor"}
-              </Badge>
-
-              <div className="w-full space-y-3">
+              <div className="w-full space-y-3 mt-2">
                 <div className="flex items-center">
                   <Store className="h-4 w-4 text-emerald-600 mr-2" />
                   <span className="text-sm text-emerald-800">{user.businessName}</span>
@@ -291,39 +277,19 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone</Label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                      <Input
-                        id="phone"
-                        name="phone"
-                        placeholder="Phone number"
-                        className="pl-10 border-emerald-200 focus:border-emerald-400"
-                        value={formData.phone}
-                        onChange={handleInputChange}
-                        disabled={!isEditing}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="businessType">Business Type</Label>
-                    <div className="relative">
-                      {user.userType === "general" ? (
-                        <Store className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                      ) : (
-                        <Wine className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                      )}
-                      <Input
-                        id="businessType"
-                        value={user.userType === "general" ? "General Shop Owner" : "Wines & Spirits Vendor"}
-                        className="pl-10 border-emerald-200"
-                        disabled
-                      />
-                    </div>
-                    <p className="text-xs text-emerald-600">Business type cannot be changed</p>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone</Label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                      id="phone"
+                      name="phone"
+                      placeholder="Phone number"
+                      className="pl-10 border-emerald-200 focus:border-emerald-400"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      disabled={!isEditing}
+                    />
                   </div>
                 </div>
 
