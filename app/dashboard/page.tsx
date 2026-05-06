@@ -23,6 +23,7 @@ import { useDashboard } from "@/components/dashboard/dashboard-provider"
 import { cn } from "@/lib/utils"
 import { SalesHistory } from "@/components/sales-history"
 import { BusinessTip } from "@/components/business-tip"
+import { DashboardPageShell } from "@/components/dashboard/page-shell"
 
 interface Product {
   id: string
@@ -153,9 +154,9 @@ export default function Dashboard() {
         <div className="absolute bottom-[-100px] right-[-80px] h-[280px] w-[280px] rounded-full bg-emerald-300/40 blur-3xl" />
       </div>
 
-      <div className="relative z-20 p-4 md:p-6 lg:p-8">
+      <DashboardPageShell className="relative z-20">
         <header className="mb-8">
-          <div className="rounded-2xl border border-emerald-100 bg-white/80 p-5 shadow-sm backdrop-blur-sm md:p-6">
+          <div className="dashboard-sticky-header">
             <h1 className="text-3xl font-bold tracking-tight text-emerald-900">Dashboard</h1>
             <p className="text-emerald-700 mt-1">Welcome back to {user.businessName}</p>
           </div>
@@ -359,6 +360,62 @@ export default function Dashboard() {
           </Card>
         </div>
 
+        <div className="mt-6">
+          <Card className="bg-white/80 backdrop-blur-sm border-emerald-100">
+            <CardHeader>
+              <CardTitle className="text-emerald-900">Comprehensive Low Stock List</CardTitle>
+              <CardDescription className="text-emerald-700">
+                Per product overview for all low and out-of-stock inventory items
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {stockAlerts.length === 0 ? (
+                <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-4 text-sm text-emerald-700">
+                  Great work. No low stock products at the moment.
+                </div>
+              ) : (
+                <div className="overflow-x-auto rounded-xl border border-emerald-100">
+                  <table className="w-full min-w-[640px] text-sm">
+                    <thead className="bg-emerald-50 text-emerald-900">
+                      <tr>
+                        <th className="px-4 py-3 text-left font-semibold">Product</th>
+                        <th className="px-4 py-3 text-left font-semibold">Category</th>
+                        <th className="px-4 py-3 text-left font-semibold">Available</th>
+                        <th className="px-4 py-3 text-left font-semibold">Unit Price</th>
+                        <th className="px-4 py-3 text-left font-semibold">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {stockAlerts.map((item, index) => {
+                        const out = item.quantity === 0
+                        return (
+                          <tr key={item.id} className={cn(index % 2 === 0 ? "bg-white" : "bg-emerald-50/30")}>
+                            <td className="px-4 py-3 font-medium text-emerald-900">{item.name}</td>
+                            <td className="px-4 py-3 text-emerald-700">{item.category}</td>
+                            <td className="px-4 py-3 text-emerald-700">
+                              {item.quantity} {item.unit}
+                              {item.quantity === 1 ? "" : "s"}
+                            </td>
+                            <td className="px-4 py-3 text-emerald-700">KSh {item.price.toLocaleString()}</td>
+                            <td className="px-4 py-3">
+                              <Badge
+                                variant={out ? "destructive" : "outline"}
+                                className={out ? "" : "text-amber-700 border-amber-300 bg-amber-50"}
+                              >
+                                {out ? "Out of Stock" : "Low Stock"}
+                              </Badge>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Sales History */}
         <div className="mt-6">
           <SalesHistory userId={user.id} limit={5} />
@@ -387,7 +444,7 @@ export default function Dashboard() {
 
         {/* Business Tip of the Day */}
         <BusinessTip userType={user.userType} />
-      </div>
+      </DashboardPageShell>
     </div>
   )
 }

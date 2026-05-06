@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/dialog"
 import { useToast } from "@/components/ui/use-toast"
 import { BackToDashboardButton } from "@/components/dashboard/back-to-dashboard-button"
+import { DashboardPageShell } from "@/components/dashboard/page-shell"
 
 export default function ProfilePage() {
   const { user, logout, loading } = useDashboard()
@@ -148,9 +149,9 @@ export default function ProfilePage() {
       {/* Background */}
       <div className="fixed inset-0 bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 -z-10"></div>
 
-      <div className="p-6 lg:p-8 lg:pl-80 relative z-10">
-        <div className="flex items-center justify-between mb-8">
-          <div className="bg-white/70 backdrop-blur-sm rounded-lg p-4 border border-emerald-100">
+      <DashboardPageShell>
+        <div className="dashboard-sticky-header flex items-center justify-between mb-8">
+          <div>
             <h1 className="text-3xl font-bold tracking-tight text-emerald-900">Profile</h1>
             <p className="text-emerald-700 mt-1">Manage your account information</p>
           </div>
@@ -426,7 +427,7 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
         </div>
-      </div>
+      </DashboardPageShell>
     </div>
   )
 }

@@ -9,11 +9,12 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Edit, Trash2, Package, Zap, ShoppingBag } from "lucide-react"
+import { Plus, Edit, Trash2, Package, Zap, ShoppingBag, Search, Sparkles } from "lucide-react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/components/ui/use-toast"
 import { BackToDashboardButton } from "@/components/dashboard/back-to-dashboard-button"
+import { DashboardPageShell } from "@/components/dashboard/page-shell"
 
 interface Product {
   id: string
@@ -39,6 +40,7 @@ export default function ProductsPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [showPopularItems, setShowPopularItems] = useState(false)
+  const [searchTerm, setSearchTerm] = useState("")
   const [formData, setFormData] = useState({
     name: "",
     price: "",
@@ -143,16 +145,6 @@ export default function ProductsPage() {
     { name: "Chamdor", category: "Wine", suggestedPrice: 400, unit: "bottle" },
   ]
 
-  useEffect(() => {
-    // Get current user
-    const userData = localStorage.getItem("lindabiz_user")
-    if (userData) {
-      const parsedUser = JSON.parse(userData)
-      setUser(parsedUser)
-      void loadProducts(parsedUser.id)
-    }
-  }, [])
-
   const loadProducts = async (userId: string) => {
     try {
       const response = await fetch(`/api/products?userId=${encodeURIComponent(userId)}`)
@@ -169,6 +161,16 @@ export default function ProductsPage() {
       })
     }
   }
+
+  useEffect(() => {
+    // Get current user
+    const userData = localStorage.getItem("lindabiz_user")
+    if (userData) {
+      const parsedUser = JSON.parse(userData)
+      setUser(parsedUser)
+      void loadProducts(parsedUser.id)
+    }
+  }, [])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData((prev) => ({
@@ -354,6 +356,15 @@ export default function ProductsPage() {
   const filteredItems = getPopularItems().filter(
     (item) => formData.category === "" || item.category === formData.category,
   )
+  const filteredProducts = products.filter((product) => {
+    const query = searchTerm.trim().toLowerCase()
+    if (!query) return true
+    return (
+      product.name.toLowerCase().includes(query) ||
+      product.category.toLowerCase().includes(query) ||
+      product.unit.toLowerCase().includes(query)
+    )
+  })
 
   if (!user) {
     return (
@@ -380,10 +391,10 @@ export default function ProductsPage() {
         ></div>
       </div>
 
-      <div className="p-4 sm:p-6 lg:p-8 lg:pl-80 relative z-10">
+      <DashboardPageShell>
         <div className="space-y-6">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
-            <div className="bg-white/70 backdrop-blur-sm rounded-lg p-4 border border-emerald-100 flex-1">
+          <div className="dashboard-sticky-header flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+            <div className="flex-1">
               <h1 className="text-2xl font-bold text-emerald-900">Products</h1>
               <p className="text-emerald-700">Manage your inventory</p>
             </div>
@@ -409,6 +420,24 @@ export default function ProductsPage() {
               </Button>
             </div>
           </div>
+          <Card className="bg-white/80 backdrop-blur-sm border-emerald-100">
+            <CardContent className="p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="relative flex-1">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-emerald-500" />
+                  <Input
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Search by product, category, or unit..."
+                    className="h-11 border-emerald-200 pl-10 text-sm focus-visible:ring-emerald-300"
+                  />
+                </div>
+                <Badge variant="outline" className="w-fit border-emerald-200 bg-emerald-50 text-emerald-700">
+                  {filteredProducts.length} / {products.length} shown
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
 
           {products.length === 0 ? (
             <Card className="bg-white/70 backdrop-blur-sm border-emerald-100">
@@ -441,9 +470,16 @@ export default function ProductsPage() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4">
-              {products.map((product) => (
-                <Card key={product.id} className="bg-white/70 backdrop-blur-sm border-emerald-100">
+            <div className="space-y-3">
+              <div className="rounded-xl border border-emerald-100 bg-white/80 px-4 py-3">
+                <p className="text-sm font-semibold text-emerald-900 flex items-center">
+                  <Sparkles className="mr-2 h-4 w-4 text-emerald-600" />
+                  All Products
+                </p>
+                <p className="text-xs text-emerald-700 mt-0.5">A curated, searchable inventory view inspired by clean admin dashboards.</p>
+              </div>
+              {filteredProducts.map((product) => (
+                <Card key={product.id} className="bg-white/80 backdrop-blur-sm border-emerald-100 shadow-sm">
                   <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 sm:p-6 gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2 mb-2">
@@ -499,10 +535,18 @@ export default function ProductsPage() {
                   </CardContent>
                 </Card>
               ))}
+              {filteredProducts.length === 0 && (
+                <Card className="bg-white/80 backdrop-blur-sm border-emerald-100">
+                  <CardContent className="py-10 text-center text-emerald-700">
+                    <Search className="mx-auto mb-3 h-8 w-8 text-emerald-400" />
+                    No products match your search.
+                  </CardContent>
+                </Card>
+              )}
             </div>
           )}
         </div>
-      </div>
+      </DashboardPageShell>
 
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
         <DialogContent className="bg-white/95 backdrop-blur-sm border-emerald-100 max-w-md mx-4 sm:max-w-2xl max-h-[90vh] overflow-y-auto">

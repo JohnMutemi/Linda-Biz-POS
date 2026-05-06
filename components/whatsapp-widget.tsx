@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { MessageCircle } from "lucide-react"
+import { usePathname } from "next/navigation"
 
 const WHATSAPP_NUMBER = "254115900005"
 const DEFAULT_MESSAGE = "Hi, I need support with LindaBiz POS."
@@ -9,11 +10,22 @@ const DEFAULT_MESSAGE = "Hi, I need support with LindaBiz POS."
 export function WhatsAppWidget() {
   const whatsappHref = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(DEFAULT_MESSAGE)}`
   const [showPrompt, setShowPrompt] = useState(true)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const pathname = usePathname()
 
   useEffect(() => {
     const dismissed = localStorage.getItem("lindabiz_whatsapp_prompt_dismissed")
     if (dismissed === "1") setShowPrompt(false)
+    const user = localStorage.getItem("lindabiz_user")
+    setIsAuthenticated(Boolean(user))
   }, [])
+
+  const protectedArea = ["/dashboard", "/products", "/sales", "/settings", "/profile"].some((route) =>
+    pathname.startsWith(route),
+  )
+  if (isAuthenticated || protectedArea) {
+    return null
+  }
 
   return (
     <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-2">

@@ -2,10 +2,11 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { LayoutDashboard, Package, ShoppingCart, Settings, Store, Wine, ChevronRight, Menu, LogOut } from "lucide-react"
+import { LayoutDashboard, Package, ShoppingCart, Settings, ChevronRight, Menu, LogOut } from "lucide-react"
 import { useDashboard } from "./dashboard-provider"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
+import { LindaBizLogo } from "@/components/brand/lindabiz-logo"
 
 export function Sidebar() {
   const { user } = useDashboard()
@@ -79,14 +80,7 @@ function MobileSidebar({
   return (
     <div className="flex flex-col h-full bg-white/95 backdrop-blur-sm">
       <div className="px-6 py-6 border-b border-emerald-200">
-        <div className="flex items-center space-x-3">
-          {user.userType === "general" ? (
-            <Store className="h-8 w-8 text-emerald-600" />
-          ) : (
-            <Wine className="h-8 w-8 text-green-600" />
-          )}
-          <span className="text-xl font-bold text-emerald-900">LindaBiz</span>
-        </div>
+        <LindaBizLogo compact />
         <p className="mt-1 text-sm text-emerald-700">{user.businessName}</p>
       </div>
 
@@ -154,14 +148,7 @@ function DesktopSidebar({
   return (
     <div className="flex flex-col h-full relative">
       <div className="px-6 py-6 border-b border-emerald-200">
-        <div className="flex items-center space-x-3">
-          {user.userType === "general" ? (
-            <Store className="h-8 w-8 text-emerald-600" />
-          ) : (
-            <Wine className="h-8 w-8 text-green-600" />
-          )}
-          <span className="text-xl font-bold text-emerald-900">LindaBiz</span>
-        </div>
+        <LindaBizLogo compact />
         <p className="mt-1 text-sm text-emerald-700">{user.businessName}</p>
       </div>
 

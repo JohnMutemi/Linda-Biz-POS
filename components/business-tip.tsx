@@ -62,13 +62,9 @@ export function BusinessTip({ userType }: BusinessTipProps) {
     "Consider offering corporate packages for office parties and events.",
   ]
 
-  const getTips = () => {
-    return userType === "wines-spirits" ? winesSpiritsTips : generalShopTips
-  }
-
   const generateTip = () => {
     setIsLoading(true)
-    const tips = getTips()
+    const tips = userType === "wines-spirits" ? winesSpiritsTips : generalShopTips
     const randomTip = tips[Math.floor(Math.random() * tips.length)]
 
     // Simulate loading for better UX
@@ -108,7 +104,7 @@ export function BusinessTip({ userType }: BusinessTipProps) {
           setIsVisible(true)
           if (!tip) generateTip()
         }}
-        className="fixed bottom-4 left-4 z-50 border-emerald-200 hover:bg-emerald-50 bg-white/90 backdrop-blur-sm"
+        className="fixed bottom-4 right-4 z-40 border-emerald-200 hover:bg-emerald-50 bg-white/90 backdrop-blur-sm sm:right-6"
       >
         <Lightbulb className="h-4 w-4 mr-2 text-emerald-600" />
         Business Tip
@@ -117,7 +113,7 @@ export function BusinessTip({ userType }: BusinessTipProps) {
   }
 
   return (
-    <Card className="fixed bottom-4 left-4 w-80 z-50 bg-white/95 backdrop-blur-sm border-emerald-200 shadow-lg">
+    <Card className="fixed bottom-4 right-3 z-40 w-[min(92vw,22rem)] bg-white/95 backdrop-blur-sm border-emerald-200 shadow-lg sm:right-6">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-emerald-900 flex items-center text-sm">

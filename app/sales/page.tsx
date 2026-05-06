@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation"
 import { useToast } from "@/components/ui/use-toast"
 import { SalesReports } from "@/components/sales-reports"
 import { BackToDashboardButton } from "@/components/dashboard/back-to-dashboard-button"
+import { DashboardPageShell } from "@/components/dashboard/page-shell"
 
 interface Product {
   id: string
@@ -241,10 +242,10 @@ export default function SalesPage() {
     <div className="min-h-screen relative">
       <div className="fixed inset-0 bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 -z-10"></div>
 
-      <div className="p-6 lg:p-8 lg:pl-80 relative z-10">
+      <DashboardPageShell>
         {/* Header */}
-        <div className="flex justify-between items-center mb-6">
-          <div className="bg-white/70 backdrop-blur-sm rounded-lg p-4 border border-emerald-100">
+        <div className="dashboard-sticky-header flex justify-between items-center mb-6">
+          <div>
             <h1 className="text-2xl font-bold text-emerald-900">Sales</h1>
             <p className="text-emerald-700">Process new sales and manage transactions</p>
           </div>
@@ -493,7 +494,7 @@ export default function SalesPage() {
         <div className="mt-6">
           <SalesReports userId={user.id} userType={user.userType} businessName={user.businessName} />
         </div>
-      </div>
+      </DashboardPageShell>
     </div>
   )
 }

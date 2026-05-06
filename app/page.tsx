@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { BarChart3, Box, Headphones, ShieldCheck, ShoppingCart, Users } from "lucide-react"
 import { MarketingHeader } from "@/components/marketing/marketing-header"
+import { DesktopPreview } from "@/components/marketing/desktop-preview"
 
 export default function Home() {
   const [loading, setLoading] = useState(true)
@@ -135,18 +135,7 @@ export default function Home() {
 
           <div className="relative flex justify-center lg:justify-end">
             <div className="absolute -left-5 top-10 hidden h-72 w-72 rounded-full bg-emerald-300/30 blur-3xl lg:block" />
-
-            <div className="relative w-full max-w-[620px] rounded-3xl border border-emerald-100 bg-white/80 p-3 shadow-2xl shadow-emerald-200/40 backdrop-blur-sm">
-              <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl bg-emerald-50">
-                <Image
-                  src="/api/landing-desktop-image?v=desktop-clean"
-                  alt="Desktop appearance"
-                  fill
-                  className="object-contain object-center"
-                  unoptimized
-                />
-              </div>
-            </div>
+            <DesktopPreview className="max-w-[620px]" />
           </div>
         </section>
       </div>

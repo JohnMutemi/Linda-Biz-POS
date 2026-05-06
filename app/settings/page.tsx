@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { SettingsIcon, Bell, Shield, Palette } from "lucide-react"
 import { useDashboard } from "@/components/dashboard/dashboard-provider"
 import { BackToDashboardButton } from "@/components/dashboard/back-to-dashboard-button"
+import { DashboardPageShell } from "@/components/dashboard/page-shell"
 
 export default function SettingsPage() {
   const { user } = useDashboard()
@@ -17,9 +18,9 @@ export default function SettingsPage() {
     <div className="min-h-screen relative">
       <div className="fixed inset-0 bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 -z-10"></div>
 
-      <div className="p-6 lg:p-8 lg:pl-80 relative z-10">
-        <div className="flex items-start justify-between gap-4 mb-8">
-          <div className="bg-white/70 backdrop-blur-sm rounded-lg p-4 border border-emerald-100 flex-1">
+      <DashboardPageShell>
+        <div className="dashboard-sticky-header flex items-start justify-between gap-4 mb-8">
+          <div className="flex-1">
             <h1 className="text-3xl font-bold tracking-tight text-emerald-900">Settings</h1>
             <p className="text-emerald-700 mt-1">Manage your application preferences</p>
           </div>
@@ -122,7 +123,7 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
         </div>
-      </div>
+      </DashboardPageShell>
     </div>
   )
 }

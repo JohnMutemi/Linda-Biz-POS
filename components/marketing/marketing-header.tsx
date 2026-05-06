@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Menu } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { LindaBizLogo } from "@/components/brand/lindabiz-logo"
 
 const navItems = [
   { label: "Features", href: "/features" },
@@ -19,16 +20,8 @@ export function MarketingHeader() {
   const pathname = usePathname()
 
   return (
-    <header className="flex items-center justify-between gap-3">
-      <Link href="/" className="flex items-center gap-2">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-base font-bold text-white">
-          P
-        </div>
-        <div>
-          <p className="text-lg font-bold text-slate-900">LindaBiz</p>
-          <p className="-mt-1 text-xs text-slate-500">Point of Sale System</p>
-        </div>
-      </Link>
+    <header className="sticky top-3 z-30 flex items-center justify-between gap-3 rounded-2xl border border-emerald-100 bg-white/80 px-3 py-2 shadow-sm backdrop-blur-md md:px-4">
+      <LindaBizLogo />
 
       <nav className="hidden items-center gap-7 text-sm font-medium text-slate-700 lg:flex">
         {navItems.map((item) => {

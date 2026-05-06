@@ -1,6 +1,16 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { verifySessionToken, getSessionCookieName } from "@/lib/auth"
+import { jwtVerify } from "jose"
+
+const SESSION_COOKIE_NAME = "lindabiz_session"
+
+function getJwtSecret() {
+  const secret = process.env.JWT_SECRET
+  if (!secret) {
+    throw new Error("JWT_SECRET is not set")
+  }
+  return new TextEncoder().encode(secret)
+}
 
 // This middleware protects all routes under /dashboard, /products, /sales, /settings, and /profile
 export async function middleware(request: NextRequest) {
@@ -9,7 +19,7 @@ export async function middleware(request: NextRequest) {
 
   if (sessionCookie) {
     try {
-      await verifySessionToken(sessionCookie)
+      await jwtVerify(sessionCookie, getJwtSecret())
       isAuthenticated = true
     } catch {
       isAuthenticated = false
@@ -29,6 +39,10 @@ export async function middleware(request: NextRequest) {
   }
 
   return NextResponse.next()
+}
+
+function getSessionCookieName() {
+  return SESSION_COOKIE_NAME
 }
 
 export const config = {
