@@ -79,19 +79,74 @@ export async function POST(request: Request) {
     }
 
     const sql = await db()
+    const addQty = Number(quantity)
+    const reorder = Number.isFinite(Number(reorderLevel)) ? Number(reorderLevel) : 5
+
     await sql`BEGIN`
     try {
+      const dupRows = await sql`
+        SELECT id, quantity FROM products
+        WHERE user_id = ${userId}
+          AND LOWER(TRIM(name)) = LOWER(TRIM(${String(name)}))
+        LIMIT 1
+      `
+      const existing = dupRows[0]
+
+      if (existing) {
+        const existingId = existing.id as string
+        const beforeQty = Number(existing.quantity)
+        const afterQty = beforeQty + addQty
+
+        await sql`
+          UPDATE products
+          SET
+            quantity = ${afterQty},
+            price = ${Number(price)},
+            unit = ${unit},
+            category = ${category},
+            description = ${typeof description === "string" ? description : null},
+            reorder_level = ${reorder},
+            user_type = ${userType}
+          WHERE id = ${existingId} AND user_id = ${userId}
+        `
+
+        await sql`
+          INSERT INTO inventory_movements (
+            user_id,
+            product_id,
+            reason,
+            quantity_change,
+            before_quantity,
+            after_quantity,
+            reference_type,
+            reference_id
+          )
+          VALUES (
+            ${userId},
+            ${existingId},
+            ${"merge"},
+            ${addQty},
+            ${beforeQty},
+            ${afterQty},
+            ${"product"},
+            ${existingId}
+          )
+        `
+        await sql`COMMIT`
+        return NextResponse.json({ success: true, merged: true, productId: existingId })
+      }
+
       await sql`
         INSERT INTO products (id, name, price, quantity, unit, category, description, reorder_level, user_type, user_id)
         VALUES (
           ${id},
           ${name},
           ${Number(price)},
-          ${Number(quantity)},
+          ${addQty},
           ${unit},
           ${category},
           ${typeof description === "string" ? description : null},
-          ${Number.isFinite(Number(reorderLevel)) ? Number(reorderLevel) : 5},
+          ${reorder},
           ${userType},
           ${userId}
         )
@@ -111,9 +166,9 @@ export async function POST(request: Request) {
           ${userId},
           ${id},
           ${"create"},
-          ${Number(quantity)},
+          ${addQty},
           ${0},
-          ${Number(quantity)},
+          ${addQty},
           ${"product"},
           ${id}
         )
@@ -124,7 +179,7 @@ export async function POST(request: Request) {
       throw error
     }
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true, merged: false })
   } catch (error) {
     console.error("Create product error:", error)
     return NextResponse.json({ error: "Failed to create product" }, { status: 500 })

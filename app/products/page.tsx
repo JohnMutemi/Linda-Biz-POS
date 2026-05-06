@@ -254,17 +254,24 @@ export default function ProductsPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(newProduct),
         })
+        const data = await response.json().catch(() => null)
         if (!response.ok) {
-          const data = await response.json().catch(() => null)
           throw new Error(data?.error || "Failed to add product")
         }
         await loadProducts(user.id)
         localStorage.setItem("lindabiz_last_inventory_update", Date.now().toString())
         window.dispatchEvent(new Event("inventory-refresh"))
-        toast({
-          title: "Product added",
-          description: `${newProduct.name} has been added to your inventory.`,
-        })
+        if (data?.merged) {
+          toast({
+            title: "Stock updated",
+            description: `${newProduct.name} already existed — added ${quantity} units to your existing line.`,
+          })
+        } else {
+          toast({
+            title: "Product added",
+            description: `${newProduct.name} has been added to your inventory.`,
+          })
+        }
       }
 
       // Reset form
@@ -497,83 +504,107 @@ export default function ProductsPage() {
               <div className="rounded-xl border border-emerald-100 bg-white/80 px-4 py-3">
                 <p className="text-sm font-semibold text-emerald-900 flex items-center">
                   <Sparkles className="mr-2 h-4 w-4 text-emerald-600" />
-                  All Products
+                  All products
                 </p>
-                <p className="text-xs text-emerald-700 mt-0.5">A curated, searchable inventory view inspired by clean admin dashboards.</p>
+                <p className="text-xs text-emerald-700 mt-0.5">
+                  Tabular rows: name, quantity, status, pricing, notes, then actions — scroll sideways on smaller screens.
+                </p>
               </div>
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {filteredProducts.map((product) => (
-                  <Card key={product.id} className="bg-white/85 backdrop-blur-sm border-emerald-100 shadow-sm">
-                    <CardContent className="p-4 sm:p-5 space-y-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <h3 className="text-base font-semibold text-emerald-900 truncate">{product.name}</h3>
-                          <div className="mt-1 flex flex-wrap items-center gap-2">
-                            <Badge variant="outline" className="border-emerald-200 text-emerald-700 bg-emerald-50">
-                              {product.category}
-                            </Badge>
-                            <Badge
-                              variant={product.quantity === 0 ? "destructive" : product.quantity <= 5 ? "secondary" : "default"}
-                              className={
-                                product.quantity === 0
-                                  ? ""
-                                  : product.quantity <= 5
-                                    ? "bg-amber-100 text-amber-800 border-amber-200"
-                                    : "bg-emerald-100 text-emerald-800 border-emerald-200"
-                              }
+              <Card className="overflow-hidden border-emerald-100 bg-white/85 backdrop-blur-sm shadow-sm">
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[980px] text-left text-sm">
+                      <thead className="border-b border-emerald-100 bg-emerald-50/90">
+                        <tr>
+                          <th className="px-4 py-3 font-semibold text-emerald-900">Product</th>
+                          <th className="px-4 py-3 font-semibold text-emerald-900">Category</th>
+                          <th className="px-4 py-3 font-semibold text-emerald-900 whitespace-nowrap">Quantity</th>
+                          <th className="px-4 py-3 font-semibold text-emerald-900 whitespace-nowrap">Price</th>
+                          <th className="px-4 py-3 font-semibold text-emerald-900 whitespace-nowrap">Reorder</th>
+                          <th className="px-4 py-3 font-semibold text-emerald-900">Status</th>
+                          <th className="px-4 py-3 font-semibold text-emerald-900 min-w-[160px]">Description</th>
+                          <th className="px-4 py-3 font-semibold text-emerald-900 text-right whitespace-nowrap">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredProducts.map((product, rowIdx) => {
+                          const reorder = product.reorderLevel ?? 5
+                          const status =
+                            product.quantity === 0
+                              ? "out"
+                              : product.quantity > 0 && product.quantity <= reorder
+                                ? "low"
+                                : "ok"
+                          return (
+                            <tr
+                              key={product.id}
+                              className={rowIdx % 2 === 0 ? "bg-white/90" : "bg-emerald-50/35 border-t border-emerald-100/50"}
                             >
-                              {product.quantity === 0 ? "Out of Stock" : product.quantity <= 5 ? "Low Stock" : "In Stock"}
-                            </Badge>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEdit(product)}
-                            className="border-emerald-200 hover:bg-emerald-50 text-emerald-700"
-                          >
-                            <Edit className="h-4 w-4" />
-                            <span className="sr-only">Edit</span>
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDelete(product.id)}
-                            className="border-red-200 hover:bg-red-50 text-red-600"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                            <span className="sr-only">Delete</span>
-                          </Button>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-3 rounded-xl border border-emerald-100 bg-emerald-50/30 p-3 text-sm">
-                        <div>
-                          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Price</p>
-                          <p className="font-semibold text-emerald-900">KSh {product.price.toLocaleString()}</p>
-                          <p className="text-xs text-emerald-700">per {product.unit}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Stock</p>
-                          <p className="font-semibold text-emerald-900">
-                            {product.quantity} {product.unit}
-                            {product.quantity === 1 ? "" : "s"}
-                          </p>
-                          <p className="text-xs text-emerald-700">Reorder level: {product.reorderLevel ?? 5}</p>
-                        </div>
-                      </div>
-
-                      <div className="rounded-xl border border-emerald-100 bg-white/60 p-3">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Description</p>
-                        <p className="mt-1 text-sm text-emerald-900 whitespace-pre-wrap">
-                          {product.description?.trim() ? product.description : "—"}
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+                              <td className="px-4 py-3 align-top">
+                                <p className="font-semibold text-emerald-950">{product.name}</p>
+                                <p className="text-xs text-emerald-600 mt-0.5">Unit: {product.unit}</p>
+                              </td>
+                              <td className="px-4 py-3 align-top text-emerald-800">{product.category}</td>
+                              <td className="px-4 py-3 align-top whitespace-nowrap tabular-nums font-medium text-emerald-950">
+                                {product.quantity}{" "}
+                                <span className="font-normal text-emerald-600">
+                                  {product.unit}
+                                  {product.quantity === 1 ? "" : "s"}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 align-top whitespace-nowrap tabular-nums text-emerald-900">
+                                KSh {product.price.toLocaleString()}
+                              </td>
+                              <td className="px-4 py-3 align-top whitespace-nowrap text-emerald-700 tabular-nums">
+                                {product.reorderLevel ?? 5}
+                              </td>
+                              <td className="px-4 py-3 align-top">
+                                <Badge
+                                  variant={status === "out" ? "destructive" : "outline"}
+                                  className={
+                                    status === "low"
+                                      ? "bg-amber-100 text-amber-900 border-amber-300"
+                                      : status === "ok"
+                                        ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                                        : ""
+                                  }
+                                >
+                                  {status === "out" ? "Out of stock" : status === "low" ? "Low stock" : "In stock"}
+                                </Badge>
+                              </td>
+                              <td className="px-4 py-3 align-top max-w-[220px]">
+                                <p className="line-clamp-2 text-emerald-800">{product.description?.trim() ? product.description : "—"}</p>
+                              </td>
+                              <td className="px-4 py-3 align-top">
+                                <div className="flex justify-end gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleEdit(product)}
+                                    className="border-emerald-200 hover:bg-emerald-50 text-emerald-700"
+                                  >
+                                    <Edit className="h-4 w-4 mr-1" />
+                                    Edit
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleDelete(product.id)}
+                                    className="border-red-200 hover:bg-red-50 text-red-600"
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-1" />
+                                    Delete
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
               {filteredProducts.length === 0 && (
                 <Card className="bg-white/80 backdrop-blur-sm border-emerald-100">
                   <CardContent className="py-10 text-center text-emerald-700">
@@ -627,8 +658,8 @@ export default function ProductsPage() {
                       {user.userType === "wines-spirits" ? "Popular Brands" : "Popular Shop Items"}
                     </CardTitle>
                     <CardDescription className="text-emerald-600">
-                      Click on {user.userType === "wines-spirits" ? "a brand" : "an item"} to auto-fill the form. You
-                      can adjust prices and quantities.
+                      Click to auto-fill the form. Saving will add to an existing line when the product name matches (same
+                      item, trimmed) — quantity is increased instead of creating a duplicate.
                     </CardDescription>
                   </CardHeader>
                   <CardContent>

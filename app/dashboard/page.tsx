@@ -22,10 +22,7 @@ import {
   LayoutDashboard,
 } from "lucide-react"
 import { useDashboard } from "@/components/dashboard/dashboard-provider"
-import { useDashboardTheme } from "@/components/dashboard/dashboard-theme-provider"
-import { DASHBOARD_THEMES, type DashboardThemeId, type DashboardThemeClasses } from "@/lib/dashboard-theme"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { SalesHistory } from "@/components/sales-history"
 import { BusinessTip } from "@/components/business-tip"
@@ -54,9 +51,24 @@ interface Sale {
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000
 
+/** Saturated, well-separated hues for slice readability (not successive greens). */
+const DASHBOARD_PIE_COLORS = [
+  "#be123c", // rose
+  "#1d4ed8", // blue
+  "#c2410c", // orange
+  "#7c3aed", // violet
+  "#047857", // emerald (accent anchor)
+  "#0891b2", // cyan
+  "#a16207", // amber / brown-gold
+  "#831843", // deep pink
+  "#0369a1", // sky
+  "#65a30d", // lime
+  "#7f1d1d", // red-brown
+  "#4338ca", // indigo
+]
+
 export default function Dashboard() {
   const { user, loading } = useDashboard()
-  const { t, themeId, setThemeId } = useDashboardTheme()
   const [dashboardTab, setDashboardTab] = useState<"overview" | "analytics">("overview")
   const [products, setProducts] = useState<Product[]>([])
   const [sales, setSales] = useState<Sale[]>([])
@@ -176,7 +188,7 @@ export default function Dashboard() {
   const lowStockItems = products.filter((product) => product.quantity > 0 && product.quantity <= 5)
   const stockAlerts = [...outOfStockItems, ...lowStockItems]
 
-  const pieColors = t.chartPalette
+  const pieColors = DASHBOARD_PIE_COLORS
   const accentColor = "emerald" as const
 
   return (
@@ -186,41 +198,27 @@ export default function Dashboard() {
         onValueChange={(v) => setDashboardTab(v as "overview" | "analytics")}
         className="space-y-6"
       >
-        <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-          <TabsList
-            className={cn(
-              "grid h-auto w-full grid-cols-2 sm:inline-flex sm:w-auto sm:grid-cols-none p-1 rounded-lg",
-              t.tabList,
-            )}
+        <TabsList className="grid h-auto w-full max-w-md grid-cols-2 rounded-lg border border-emerald-100 bg-white/60 p-1 sm:inline-flex sm:w-auto sm:grid-cols-none">
+          <TabsTrigger
+            value="overview"
+            className="gap-2 rounded-md text-emerald-800 hover:bg-emerald-50/80 data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-sm"
           >
-            <TabsTrigger value="overview" className={cn("gap-2 rounded-md", t.tabTrigger)}>
-              <LayoutDashboard className="h-4 w-4 shrink-0" />
-              Overview
-            </TabsTrigger>
-            <TabsTrigger value="analytics" className={cn("gap-2 rounded-md", t.tabTrigger)}>
-              <BarChart3 className="h-4 w-4 shrink-0" />
-              Analytics
-            </TabsTrigger>
-          </TabsList>
-          <Select value={themeId} onValueChange={(v) => setThemeId(v as DashboardThemeId)}>
-            <SelectTrigger className={cn("w-full sm:w-[260px]", t.selectTrigger)}>
-              <SelectValue placeholder="Color theme" />
-            </SelectTrigger>
-            <SelectContent>
-              {(Object.keys(DASHBOARD_THEMES) as DashboardThemeId[]).map((id) => (
-                <SelectItem key={id} value={id}>
-                  {DASHBOARD_THEMES[id].label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+            <LayoutDashboard className="h-4 w-4 shrink-0" />
+            Overview
+          </TabsTrigger>
+          <TabsTrigger
+            value="analytics"
+            className="gap-2 rounded-md text-emerald-800 hover:bg-emerald-50/80 data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-sm"
+          >
+            <BarChart3 className="h-4 w-4 shrink-0" />
+            Analytics
+          </TabsTrigger>
+        </TabsList>
 
         <TabsContent value="overview" className="mt-0 space-y-8 ring-offset-0">
         {/* Stats Overview */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <StatsCard
-            t={t}
             title="Total Stock Value"
             value={`KSh ${totalStockValue.toLocaleString()}`}
             description={`Across ${products.length} products`}
@@ -228,7 +226,6 @@ export default function Dashboard() {
             accentColor={accentColor}
           />
           <StatsCard
-            t={t}
             title="Today's Sales"
             value={`KSh ${todaySales.toLocaleString()}`}
             description={
@@ -254,7 +251,6 @@ export default function Dashboard() {
             accentColor={accentColor}
           />
           <StatsCard
-            t={t}
             title="Products in Stock"
             value={products.filter((p) => p.quantity > 0).length.toString()}
             description={`Out of ${products.length} total products`}
@@ -262,7 +258,6 @@ export default function Dashboard() {
             accentColor={accentColor}
           />
           <StatsCard
-            t={t}
             title="Stock Alerts"
             value={stockAlerts.length.toString()}
             description={stockAlerts.length > 0 ? "Items need attention" : "All stock levels are good"}
@@ -470,7 +465,7 @@ export default function Dashboard() {
               ) : (
                 <div className="space-y-3">
                   {products.slice(0, 5).map((product) => (
-                    <ProductItem key={product.id} product={product} userType={user.userType} t={t} />
+                    <ProductItem key={product.id} product={product} userType={user.userType} />
                   ))}
                 </div>
               )}
@@ -543,19 +538,16 @@ export default function Dashboard() {
         {user.userType === "wines-spirits" && (
           <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
             <CategoryCard
-              t={t}
               title="Wines"
               count={products.filter((p) => p.category?.toLowerCase() === "wine").length}
               icon={<Wine className="h-5 w-5 text-emerald-500" />}
             />
             <CategoryCard
-              t={t}
               title="Spirits"
               count={products.filter((p) => p.category?.toLowerCase() === "spirits").length}
               icon={<Package className="h-5 w-5 text-emerald-500" />}
             />
             <CategoryCard
-              t={t}
               title="Beers"
               count={products.filter((p) => p.category?.toLowerCase() === "beer").length}
               icon={<Beer className="h-5 w-5 text-emerald-500" />}
@@ -569,47 +561,47 @@ export default function Dashboard() {
 
         <TabsContent value="analytics" className="mt-0 space-y-6 ring-offset-0">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <Card className={cn(t.card, t.border)}>
+            <Card className="border-emerald-100 bg-white/70 backdrop-blur-sm">
               <CardHeader className="pb-2">
-                <CardTitle className={cn("text-base font-semibold", t.cardTitle)}>30-day revenue</CardTitle>
-                <CardDescription className={t.cardDesc}>Sum of all sales in the last 30 days</CardDescription>
+                <CardTitle className="text-base font-semibold text-emerald-900">30-day revenue</CardTitle>
+                <CardDescription className="text-emerald-700">Sum of all sales in the last 30 days</CardDescription>
               </CardHeader>
               <CardContent>
-                <p className={cn("text-2xl font-bold tabular-nums", t.textStrong)}>KSh {revenue30.toLocaleString()}</p>
+                <p className="text-2xl font-bold tabular-nums text-emerald-900">KSh {revenue30.toLocaleString()}</p>
               </CardContent>
             </Card>
-            <Card className={cn(t.card, t.border)}>
+            <Card className="border-emerald-100 bg-white/70 backdrop-blur-sm">
               <CardHeader className="pb-2">
-                <CardTitle className={cn("text-base font-semibold", t.cardTitle)}>Sales count</CardTitle>
-                <CardDescription className={t.cardDesc}>Transactions in the last 30 days</CardDescription>
+                <CardTitle className="text-base font-semibold text-emerald-900">Sales count</CardTitle>
+                <CardDescription className="text-emerald-700">Transactions in the last 30 days</CardDescription>
               </CardHeader>
               <CardContent>
-                <p className={cn("text-2xl font-bold tabular-nums", t.textStrong)}>{count30}</p>
+                <p className="text-2xl font-bold tabular-nums text-emerald-900">{count30}</p>
               </CardContent>
             </Card>
-            <Card className={cn(t.card, t.border)}>
+            <Card className="border-emerald-100 bg-white/70 backdrop-blur-sm">
               <CardHeader className="pb-2">
-                <CardTitle className={cn("text-base font-semibold", t.cardTitle)}>Avg order value</CardTitle>
-                <CardDescription className={t.cardDesc}>Average per transaction (30 days)</CardDescription>
+                <CardTitle className="text-base font-semibold text-emerald-900">Avg order value</CardTitle>
+                <CardDescription className="text-emerald-700">Average per transaction (30 days)</CardDescription>
               </CardHeader>
               <CardContent>
-                <p className={cn("text-2xl font-bold tabular-nums", t.textStrong)}>
+                <p className="text-2xl font-bold tabular-nums text-emerald-900">
                   KSh {Math.round(avgOrder30).toLocaleString()}
                 </p>
               </CardContent>
             </Card>
           </div>
 
-          <Card className={cn(t.card, t.border)}>
+          <Card className="border-emerald-100 bg-white/70 backdrop-blur-sm">
             <CardHeader>
-              <CardTitle className={t.cardTitle}>Most sold items (last 30 days)</CardTitle>
-              <CardDescription className={t.cardDesc}>
-                Each item uses a different color so you can compare at a glance.
+              <CardTitle className="text-emerald-900">Most sold items (last 30 days)</CardTitle>
+              <CardDescription className="text-emerald-700">
+                Each row uses a different accent so you can compare at a glance.
               </CardDescription>
             </CardHeader>
             <CardContent>
               {topSold.length === 0 ? (
-                <div className={cn("rounded-xl border p-4 text-sm", t.successBanner)}>
+                <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-4 text-sm text-emerald-700">
                   No sales data yet for this period.
                 </div>
               ) : (
@@ -640,10 +632,7 @@ export default function Dashboard() {
                       return (
                         <div
                           key={it.name}
-                          className={cn(
-                            "flex items-center justify-between rounded-xl border px-3 py-3 shadow-sm backdrop-blur-sm transition-opacity",
-                            t.border,
-                          )}
+                          className="flex items-center justify-between rounded-xl border border-emerald-100 px-3 py-3 shadow-sm backdrop-blur-sm"
                           style={{
                             background: `linear-gradient(90deg, ${color}22 0%, transparent 65%)`,
                             borderLeftWidth: 4,
@@ -657,9 +646,9 @@ export default function Dashboard() {
                             >
                               {idx + 1}
                             </span>
-                            <p className={cn("truncate text-sm font-medium", t.textStrong)}>{it.name}</p>
+                            <p className="truncate text-sm font-medium text-emerald-900">{it.name}</p>
                           </div>
-                          <Badge variant="outline" className={cn("shrink-0 border-current tabular-nums", t.textMuted)} style={{ color }}>
+                          <Badge variant="outline" className="shrink-0 border-current tabular-nums text-emerald-800" style={{ color }}>
                             {it.quantitySold} sold
                           </Badge>
                         </div>
@@ -677,14 +666,12 @@ export default function Dashboard() {
 }
 
 function StatsCard({
-  t,
   title,
   value,
   description,
   icon,
   accentColor = "emerald",
 }: {
-  t: DashboardThemeClasses
   title: string
   value: string
   description: string
@@ -698,14 +685,14 @@ function StatsCard({
   }
 
   return (
-    <Card className={cn(t.card, t.border)}>
+    <Card className="border-emerald-100 bg-white/70 backdrop-blur-sm">
       <CardContent className="p-6">
         <div className="flex items-center space-x-4">
           <div className={cn("p-2 rounded-full", colorMap[accentColor])}>{icon}</div>
           <div>
-            <p className={cn("text-sm font-medium", t.textLabel)}>{title}</p>
-            <h3 className={cn("text-2xl font-bold mt-1", t.textStrong)}>{value}</h3>
-            <p className={cn("text-xs mt-1", t.textLabel)}>{description}</p>
+            <p className="text-sm font-medium text-emerald-600">{title}</p>
+            <h3 className="text-2xl font-bold mt-1 text-emerald-900">{value}</h3>
+            <p className="text-xs text-emerald-600 mt-1">{description}</p>
           </div>
         </div>
       </CardContent>
@@ -713,25 +700,15 @@ function StatsCard({
   )
 }
 
-function CategoryCard({
-  t,
-  title,
-  count,
-  icon,
-}: {
-  t: DashboardThemeClasses
-  title: string
-  count: number
-  icon: React.ReactNode
-}) {
+function CategoryCard({ title, count, icon }: { title: string; count: number; icon: React.ReactNode }) {
   return (
-    <Card className={cn(t.card, t.border)}>
+    <Card className="border-emerald-100 bg-white/70 backdrop-blur-sm">
       <CardContent className="p-6">
         <div className="flex items-center justify-between">
           <div>
-            <p className={cn("text-sm font-medium", t.textLabel)}>{title}</p>
-            <h3 className={cn("text-2xl font-bold mt-1", t.textStrong)}>{count}</h3>
-            <p className={cn("text-xs mt-1", t.textLabel)}>{count === 1 ? "Product" : "Products"}</p>
+            <p className="text-sm font-medium text-emerald-600">{title}</p>
+            <h3 className="text-2xl font-bold mt-1 text-emerald-900">{count}</h3>
+            <p className="text-xs text-emerald-600 mt-1">{count === 1 ? "Product" : "Products"}</p>
           </div>
           <div>{icon}</div>
         </div>
@@ -740,15 +717,7 @@ function CategoryCard({
   )
 }
 
-function ProductItem({
-  product,
-  userType,
-  t,
-}: {
-  product: Product
-  userType: "general" | "wines-spirits"
-  t: DashboardThemeClasses
-}) {
+function ProductItem({ product, userType }: { product: Product; userType: "general" | "wines-spirits" }) {
   const getStockStatus = () => {
     if (product.quantity === 0) {
       return { label: "Out of Stock", variant: "destructive" as const }
@@ -779,31 +748,25 @@ function ProductItem({
   }
 
   return (
-    <div
-      className={cn(
-        "flex items-center justify-between p-4 border rounded-lg bg-white/50 hover:opacity-95",
-        t.border,
-        t.id === "dark" ? "hover:bg-slate-800/40" : "hover:bg-white/80",
-      )}
-    >
+    <div className="flex items-center justify-between p-4 border border-emerald-100 rounded-lg hover:bg-emerald-50/50 bg-white/50">
       <div className="flex items-center space-x-3">
         <div className={cn("p-2 rounded-full", userType === "general" ? "bg-emerald-50" : "bg-green-50")}>
           {getCategoryIcon()}
         </div>
         <div>
-          <p className={cn("font-medium", t.textStrong)}>{product.name}</p>
+          <p className="font-medium text-emerald-900">{product.name}</p>
           <div className="flex items-center mt-1">
-            <p className={cn("text-sm", t.textMuted)}>
+            <p className="text-sm text-emerald-700">
               KSh {product.price} per {product.unit}
             </p>
-            <Badge variant="outline" className={cn("ml-2 text-xs", t.border)}>
+            <Badge variant="outline" className="ml-2 text-xs border-emerald-200">
               {product.category}
             </Badge>
           </div>
         </div>
       </div>
       <div className="text-right">
-        <p className={cn("font-medium", t.textStrong)}>
+        <p className="font-medium text-emerald-900">
           {product.quantity} {product.unit}s
         </p>
         <Badge variant={status.variant} className={status.className}>
