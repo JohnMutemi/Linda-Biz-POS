@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils"
 import { SalesHistory } from "@/components/sales-history"
 import { BusinessTip } from "@/components/business-tip"
 import { DashboardPageShell } from "@/components/dashboard/page-shell"
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts"
 
 interface Product {
   id: string
@@ -52,6 +53,7 @@ export default function Dashboard() {
   const [todaySales, setTodaySales] = useState(0)
   const [totalStockValue, setTotalStockValue] = useState(0)
   const [dataLoading, setDataLoading] = useState(true)
+  const [topSold, setTopSold] = useState<{ name: string; quantitySold: number }[]>([])
   const router = useRouter()
 
   useEffect(() => {
@@ -103,6 +105,16 @@ export default function Dashboard() {
         }, 0)
         setTotalStockValue(stockValue)
 
+        // Load top sold items (last 30 days)
+        const topResponse = await fetch(`/api/analytics/top-products?userId=${encodeURIComponent(user.id)}&days=30&limit=8`)
+        if (topResponse.ok) {
+          const topData = await topResponse.json()
+          const items = Array.isArray(topData?.items) ? topData.items : []
+          setTopSold(items.map((it: any) => ({ name: it.name, quantitySold: Number(it.quantitySold || 0) })).filter((it: any) => it.quantitySold > 0))
+        } else {
+          setTopSold([])
+        }
+
         console.log("Dashboard data loaded:", {
           products: userProducts.length,
           sales: userSales.length,
@@ -126,12 +138,14 @@ export default function Dashboard() {
     }
 
     window.addEventListener("dashboard-refresh", handleRefresh)
+    window.addEventListener("inventory-refresh", handleRefresh)
 
     // Also refresh when localStorage changes (for real-time updates)
     window.addEventListener("storage", handleRefresh)
 
     return () => {
       window.removeEventListener("dashboard-refresh", handleRefresh)
+      window.removeEventListener("inventory-refresh", handleRefresh)
       window.removeEventListener("storage", handleRefresh)
     }
   }, [user])
@@ -145,6 +159,7 @@ export default function Dashboard() {
   const stockAlerts = [...outOfStockItems, ...lowStockItems]
 
   const accentColor = "emerald"
+  const pieColors = ["#059669", "#10b981", "#34d399", "#6ee7b7", "#22c55e", "#16a34a", "#4ade80", "#86efac"]
 
   return (
     <div className="min-h-screen relative">
@@ -157,8 +172,15 @@ export default function Dashboard() {
       <DashboardPageShell className="relative z-20">
         <header className="mb-8">
           <div className="dashboard-sticky-header">
-            <h1 className="text-3xl font-bold tracking-tight text-emerald-900">Dashboard</h1>
-            <p className="text-emerald-700 mt-1">Welcome back to {user.businessName}</p>
+            <div className="rounded-2xl border border-emerald-100 bg-white/70 px-5 py-4 shadow-sm shadow-emerald-100/60">
+              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Welcome</p>
+              <h1 className="mt-1 text-3xl font-bold tracking-tight text-emerald-900">
+                {user.name.split(" ")[0] ? `Hi, ${user.name.split(" ")[0]} —` : "Hi —"} here’s your business snapshot
+              </h1>
+              <p className="mt-2 text-emerald-700">
+                <span className="font-semibold text-emerald-900">{user.businessName}</span> · Track stock, process sales, and review performance.
+              </p>
+            </div>
           </div>
         </header>
 
@@ -211,6 +233,65 @@ export default function Dashboard() {
             accentColor={stockAlerts.length > 0 ? "amber" : accentColor}
           />
         </div>
+
+        {/* Stock Banners */}
+        {(outOfStockItems.length > 0 || lowStockItems.length > 0) && (
+          <div className="mb-8 grid grid-cols-1 gap-4 lg:grid-cols-2">
+            {outOfStockItems.length > 0 && (
+              <Card className="border-rose-200 bg-rose-50/60 backdrop-blur-sm">
+                <CardHeader>
+                  <CardTitle className="text-rose-900">Out of Stock</CardTitle>
+                  <CardDescription className="text-rose-700">
+                    {outOfStockItems.length} item{outOfStockItems.length === 1 ? "" : "s"} need restocking.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {outOfStockItems.slice(0, 6).map((p) => (
+                    <div key={p.id} className="flex items-center justify-between rounded-lg border border-rose-200 bg-white/70 px-3 py-2">
+                      <p className="text-sm font-medium text-rose-900">{p.name}</p>
+                      <Badge variant="destructive">0</Badge>
+                    </div>
+                  ))}
+                  <Button
+                    variant="outline"
+                    className="w-full border-rose-200 text-rose-700 hover:bg-rose-100"
+                    onClick={() => router.push("/products")}
+                  >
+                    Restock now
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
+            {lowStockItems.length > 0 && (
+              <Card className="border-amber-200 bg-amber-50/60 backdrop-blur-sm">
+                <CardHeader>
+                  <CardTitle className="text-amber-900">Low Stock</CardTitle>
+                  <CardDescription className="text-amber-800">
+                    {lowStockItems.length} item{lowStockItems.length === 1 ? "" : "s"} are running low.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {lowStockItems.slice(0, 6).map((p) => (
+                    <div key={p.id} className="flex items-center justify-between rounded-lg border border-amber-200 bg-white/70 px-3 py-2">
+                      <p className="text-sm font-medium text-amber-900">{p.name}</p>
+                      <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-800">
+                        {p.quantity}
+                      </Badge>
+                    </div>
+                  ))}
+                  <Button
+                    variant="outline"
+                    className="w-full border-amber-200 text-amber-800 hover:bg-amber-100"
+                    onClick={() => router.push("/products")}
+                  >
+                    Review inventory
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Quick Actions */}
@@ -419,6 +500,52 @@ export default function Dashboard() {
         {/* Sales History */}
         <div className="mt-6">
           <SalesHistory userId={user.id} limit={5} />
+        </div>
+
+        {/* Most Sold Items */}
+        <div className="mt-6">
+          <Card className="bg-white/80 backdrop-blur-sm border-emerald-100">
+            <CardHeader>
+              <CardTitle className="text-emerald-900">Most Sold Items (Last 30 Days)</CardTitle>
+              <CardDescription className="text-emerald-700">A quick performance snapshot of your best movers.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {topSold.length === 0 ? (
+                <div className="rounded-xl border border-emerald-100 bg-emerald-50/40 p-4 text-sm text-emerald-700">
+                  No sales data yet for this period.
+                </div>
+              ) : (
+                <div className="grid gap-6 lg:grid-cols-2">
+                  <div className="h-72 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie data={topSold} dataKey="quantitySold" nameKey="name" outerRadius={100} innerRadius={55} paddingAngle={3}>
+                          {topSold.map((_, idx) => (
+                            <Cell key={idx} fill={pieColors[idx % pieColors.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="space-y-2">
+                    {topSold.map((it, idx) => (
+                      <div key={it.name} className="flex items-center justify-between rounded-lg border border-emerald-100 bg-white/60 px-3 py-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: pieColors[idx % pieColors.length] }} />
+                          <p className="text-sm font-medium text-emerald-900 truncate">{it.name}</p>
+                        </div>
+                        <Badge variant="outline" className="border-emerald-200 text-emerald-700">
+                          {it.quantitySold}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         {/* Category Overview for Wines & Spirits */}

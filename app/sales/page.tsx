@@ -43,6 +43,20 @@ export default function SalesPage() {
       setUser(parsedUser)
       void loadProducts(parsedUser.id)
     }
+
+    const handleInventoryRefresh = () => {
+      const currentUser = JSON.parse(localStorage.getItem("lindabiz_user") || "null")
+      if (currentUser?.id) {
+        void loadProducts(currentUser.id)
+      }
+    }
+
+    window.addEventListener("inventory-refresh", handleInventoryRefresh)
+    window.addEventListener("storage", handleInventoryRefresh)
+    return () => {
+      window.removeEventListener("inventory-refresh", handleInventoryRefresh)
+      window.removeEventListener("storage", handleInventoryRefresh)
+    }
   }, [])
 
   const loadProducts = async (userId: string) => {

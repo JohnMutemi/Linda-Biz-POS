@@ -24,7 +24,11 @@ export async function GET(request: Request) {
         approval_status,
         approved_at,
         approved_by,
-        login_route_sent_at
+        login_route_sent_at,
+        terms_accepted_at,
+        suspended_at,
+        suspended_reason,
+        deleted_at
       FROM users
       ORDER BY registration_date DESC
     `
@@ -42,6 +46,10 @@ export async function GET(request: Request) {
       approvedAt: client.approved_at,
       approvedBy: client.approved_by,
       loginRouteSentAt: client.login_route_sent_at,
+      termsAcceptedAt: client.terms_accepted_at,
+      suspendedAt: client.suspended_at,
+      suspendedReason: client.suspended_reason,
+      deletedAt: client.deleted_at,
     })))
   } catch (error) {
     console.error("Admin clients list error:", error)

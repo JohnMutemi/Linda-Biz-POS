@@ -4,13 +4,14 @@ import { db } from "@/lib/database"
 import { getAdminSession } from "@/lib/admin-auth"
 import { buildLoginUrl, sendLoginRouteEmail } from "@/lib/mailer"
 
-type ActionType = "approve" | "reject" | "send-login-route"
+type ActionType = "approve" | "reject" | "send-login-route" | "suspend" | "unsuspend" | "delete"
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ clientId: string }> },
 ) {
   try {
+    const requestOrigin = new URL(request.url).origin
     const admin = await getAdminSession(request)
     if (!admin) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -26,7 +27,7 @@ export async function POST(
 
     const sql = await db()
     const users = await sql`
-      SELECT id, name, email, approval_status, login_route_token
+      SELECT id, name, email, approval_status, login_route_token, suspended_at, deleted_at
       FROM users
       WHERE id = ${clientId}
       LIMIT 1
@@ -46,7 +47,7 @@ export async function POST(
 
     if (action === "approve") {
       const token = client.login_route_token || randomBytes(24).toString("hex")
-      const loginUrl = buildLoginUrl(token, client.email)
+      const loginUrl = buildLoginUrl(token, client.email, requestOrigin)
       const emailResult = await sendLoginRouteEmail({
         to: client.email,
         recipientName: client.name,
@@ -60,7 +61,8 @@ export async function POST(
           approved_at = NOW(),
           approved_by = ${admin.email},
           login_route_token = ${token},
-          login_route_sent_at = NOW()
+          login_route_sent_at = NOW(),
+          terms_accepted_at = NULL
         WHERE id = ${clientId}
       `
       await insertAuditLog(
@@ -91,12 +93,46 @@ export async function POST(
       return NextResponse.json({ success: true, message: "Client rejected" })
     }
 
+    if (action === "suspend") {
+      const body = await request.json().catch(() => ({}))
+      const reason = typeof body?.reason === "string" ? body.reason.slice(0, 500) : ""
+      await sql`
+        UPDATE users
+        SET suspended_at = NOW(), suspended_reason = ${reason || "Policy violation"}
+        WHERE id = ${clientId}
+      `
+      await insertAuditLog("suspend", reason || "Account suspended.")
+      return NextResponse.json({ success: true, message: "Client suspended" })
+    }
+
+    if (action === "unsuspend") {
+      await sql`
+        UPDATE users
+        SET suspended_at = NULL, suspended_reason = NULL
+        WHERE id = ${clientId}
+      `
+      await insertAuditLog("unsuspend", "Account unsuspended.")
+      return NextResponse.json({ success: true, message: "Client unsuspended" })
+    }
+
+    if (action === "delete") {
+      const body = await request.json().catch(() => ({}))
+      const reason = typeof body?.reason === "string" ? body.reason.slice(0, 500) : ""
+      await sql`
+        UPDATE users
+        SET deleted_at = NOW()
+        WHERE id = ${clientId}
+      `
+      await insertAuditLog("delete", reason || "Account deleted (soft delete).")
+      return NextResponse.json({ success: true, message: "Client deleted" })
+    }
+
     if (client.approval_status !== "approved") {
       return NextResponse.json({ error: "Client must be approved first." }, { status: 400 })
     }
 
     const token = client.login_route_token || randomBytes(24).toString("hex")
-    const loginUrl = buildLoginUrl(token, client.email)
+    const loginUrl = buildLoginUrl(token, client.email, requestOrigin)
 
     const emailResult = await sendLoginRouteEmail({
       to: client.email,

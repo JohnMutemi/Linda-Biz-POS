@@ -32,7 +32,13 @@ export async function initDatabase() {
       approved_at TIMESTAMPTZ,
       approved_by TEXT,
       login_route_token TEXT,
-      login_route_sent_at TIMESTAMPTZ
+      login_route_sent_at TIMESTAMPTZ,
+      password_reset_token_hash TEXT,
+      password_reset_expires_at TIMESTAMPTZ,
+      terms_accepted_at TIMESTAMPTZ,
+      suspended_at TIMESTAMPTZ,
+      suspended_reason TEXT,
+      deleted_at TIMESTAMPTZ
     )
   `
 
@@ -41,6 +47,12 @@ export async function initDatabase() {
   await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS approved_by TEXT`
   await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS login_route_token TEXT`
   await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS login_route_sent_at TIMESTAMPTZ`
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_token_hash TEXT`
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_expires_at TIMESTAMPTZ`
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS terms_accepted_at TIMESTAMPTZ`
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS suspended_at TIMESTAMPTZ`
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS suspended_reason TEXT`
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ`
 
   const adminEmails = Array.from(getAdminEmails())
   const adminSeedPassword = process.env.ADMIN_DEFAULT_PASSWORD
@@ -128,13 +140,35 @@ export async function initDatabase() {
       quantity INTEGER NOT NULL,
       unit TEXT NOT NULL,
       category TEXT NOT NULL,
+      description TEXT,
+      reorder_level INTEGER NOT NULL DEFAULT 5,
       user_type TEXT NOT NULL,
       user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE
     )
   `
 
+  await sql`ALTER TABLE products ADD COLUMN IF NOT EXISTS description TEXT`
+  await sql`ALTER TABLE products ADD COLUMN IF NOT EXISTS reorder_level INTEGER NOT NULL DEFAULT 5`
+
   await sql`CREATE INDEX IF NOT EXISTS products_user_id_idx ON products(user_id)`
   await sql`CREATE INDEX IF NOT EXISTS products_user_id_name_idx ON products(user_id, name)`
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS inventory_movements (
+      id BIGSERIAL PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      product_id TEXT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+      reason TEXT NOT NULL,
+      quantity_change INTEGER NOT NULL,
+      before_quantity INTEGER NOT NULL,
+      after_quantity INTEGER NOT NULL,
+      reference_type TEXT,
+      reference_id TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `
+  await sql`CREATE INDEX IF NOT EXISTS inventory_movements_user_created_idx ON inventory_movements(user_id, created_at DESC)`
+  await sql`CREATE INDEX IF NOT EXISTS inventory_movements_product_created_idx ON inventory_movements(product_id, created_at DESC)`
 
   await sql`
     CREATE TABLE IF NOT EXISTS sales (

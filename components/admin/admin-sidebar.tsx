@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Shield, Users, LogOut } from "lucide-react"
 import { useDashboard } from "@/components/dashboard/dashboard-provider"
 import { cn } from "@/lib/utils"
+import { LindaBizLogo } from "@/components/brand/lindabiz-logo"
 
 const navigation = [
   {
@@ -27,10 +28,15 @@ export function AdminSidebar() {
   if (!user) return null
 
   return (
-    <div className="hidden lg:flex lg:flex-col lg:w-72 lg:fixed lg:inset-y-0 lg:z-30 border-r border-emerald-200 bg-white/95 backdrop-blur-sm shadow-sm">
-      <div className="px-6 py-6 border-b border-emerald-200">
-        <p className="text-xs uppercase tracking-wide text-emerald-600 font-semibold">Admin Console</p>
-        <h2 className="text-lg font-bold text-emerald-900 mt-1">LindaBiz Administration</h2>
+    <div className="hidden lg:flex lg:flex-col lg:w-72 lg:fixed lg:inset-y-0 lg:z-30 border-r border-white/40 bg-white/65 backdrop-blur-xl shadow-sm shadow-emerald-200/40">
+      <div className="px-6 py-6 border-b border-white/40">
+          <div className="flex items-center gap-3">
+            <LindaBizLogo compact href="/admin" />
+            <div className="min-w-0">
+              <p className="text-xs uppercase tracking-wide text-emerald-600 font-semibold">Admin Console</p>
+              <h2 className="text-lg font-bold text-emerald-900 mt-0.5 truncate">{user.businessName}</h2>
+            </div>
+          </div>
       </div>
 
       <div className="flex-1 px-4 py-4 overflow-y-auto">
@@ -68,7 +74,7 @@ export function AdminSidebar() {
         </div>
         <Button
           variant="outline"
-          className="w-full justify-start border-emerald-200 hover:bg-emerald-50 text-emerald-700"
+          className="w-full justify-start border-rose-200 bg-rose-50/50 text-rose-700 hover:bg-rose-50 hover:text-rose-800 hover:border-rose-300"
           onClick={confirmLogout}
         >
           <LogOut className="mr-2 h-4 w-4" />

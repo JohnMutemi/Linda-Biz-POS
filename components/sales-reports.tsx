@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -41,22 +41,18 @@ export function SalesReports({ userId, userType, businessName }: SalesReportsPro
   const [isGenerating, setIsGenerating] = useState(false)
   const { toast } = useToast()
 
-  useEffect(() => {
-    void loadSales()
-  }, [userId])
-
-  useEffect(() => {
-    filterSales()
-  }, [sales, filterType, startDate, endDate])
-
-  const loadSales = async () => {
+  const loadSales = useCallback(async () => {
     const response = await fetch(`/api/sales?userId=${encodeURIComponent(userId)}`)
     if (!response.ok) return
     const userSales: Sale[] = await response.json()
     setSales(userSales)
-  }
+  }, [userId])
 
-  const filterSales = () => {
+  useEffect(() => {
+    void loadSales()
+  }, [loadSales])
+
+  const filterSales = useCallback(() => {
     const now = new Date()
     let filtered: Sale[] = []
 
@@ -93,7 +89,11 @@ export function SalesReports({ userId, userType, businessName }: SalesReportsPro
     }
 
     setFilteredSales(filtered)
-  }
+  }, [sales, filterType, startDate, endDate])
+
+  useEffect(() => {
+    filterSales()
+  }, [filterSales])
 
   const calculateMetrics = () => {
     const totalRevenue = filteredSales.reduce((sum, sale) => sum + sale.total, 0)
@@ -119,21 +119,28 @@ export function SalesReports({ userId, userType, businessName }: SalesReportsPro
     setIsGenerating(true)
 
     try {
-      const metrics = calculateMetrics()
-      const reportDate = new Date().toLocaleDateString()
+      const params = new URLSearchParams({
+        userId,
+        filterType,
+      })
+      if (filterType === "custom") {
+        if (startDate) params.set("startDate", startDate)
+        if (endDate) params.set("endDate", endDate)
+      }
 
-      // Create PDF content
-      const pdfContent = generatePDFContent(metrics, reportDate)
+      const response = await fetch(`/api/sales/report/pdf?${params.toString()}`)
+      if (!response.ok) {
+        const data = await response.json().catch(() => null)
+        throw new Error(data?.error || "Failed to generate PDF")
+      }
 
-      // Create and download PDF
-      const blob = new Blob([pdfContent], { type: "text/html" })
+      const blob = await response.blob()
       const url = URL.createObjectURL(blob)
       const link = document.createElement("a")
       link.href = url
 
       const periodText = filterType === "custom" && startDate && endDate ? `${startDate}_to_${endDate}` : filterType
-
-      link.download = `${businessName.replace(/\s+/g, "_")}_Sales_Report_${periodText}_${new Date().toISOString().split("T")[0]}.html`
+      link.download = `${businessName.replace(/\s+/g, "_")}_Sales_Report_${periodText}_${new Date().toISOString().split("T")[0]}.pdf`
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
@@ -141,7 +148,7 @@ export function SalesReports({ userId, userType, businessName }: SalesReportsPro
 
       toast({
         title: "Report Generated",
-        description: "Sales report has been downloaded successfully. You can print it as PDF from your browser.",
+        description: "Sales report PDF has been downloaded successfully.",
       })
     } catch (error) {
       console.error("Error generating report:", error)
@@ -153,194 +160,6 @@ export function SalesReports({ userId, userType, businessName }: SalesReportsPro
     } finally {
       setIsGenerating(false)
     }
-  }
-
-  const generatePDFContent = (metrics: any, reportDate: string) => {
-    const periodText = getPeriodText()
-
-    const escapeHtml = (value: string) =>
-      value
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#39;")
-
-    const getItemsSummary = (sale: Sale) => {
-      const items = Array.isArray(sale.items) ? sale.items : []
-      const normalized = items
-        .map((it) => ({
-          name: it.productName ?? "Item",
-          qty: it.quantity ?? it.cartQuantity ?? 1,
-        }))
-        .filter((it) => it.name)
-
-      if (normalized.length === 0) return "—"
-      const shown = normalized.slice(0, 4).map((it) => `${escapeHtml(it.name)} ×${it.qty}`)
-      const remaining = normalized.length - shown.length
-      return remaining > 0 ? `${shown.join(", ")} +${remaining} more` : shown.join(", ")
-    }
-
-    return `
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Sales Report - ${businessName}</title>
-    <style>
-        body { 
-            font-family: Arial, sans-serif; 
-            margin: 20px; 
-            color: #333;
-            line-height: 1.6;
-        }
-        .header { 
-            text-align: center; 
-            margin-bottom: 30px; 
-            border-bottom: 2px solid #059669;
-            padding-bottom: 20px;
-        }
-        .header h1 { 
-            color: #059669; 
-            margin: 0;
-            font-size: 28px;
-        }
-        .header h2 { 
-            color: #065f46; 
-            margin: 5px 0;
-            font-size: 18px;
-            font-weight: normal;
-        }
-        .metrics { 
-            display: grid; 
-            grid-template-columns: repeat(2, 1fr); 
-            gap: 20px; 
-            margin-bottom: 30px;
-        }
-        .metric-card { 
-            border: 1px solid #d1fae5; 
-            padding: 20px; 
-            border-radius: 8px;
-            background-color: #f0fdf4;
-        }
-        .metric-card h3 { 
-            margin: 0 0 10px 0; 
-            color: #059669;
-            font-size: 14px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .metric-card .value { 
-            font-size: 24px; 
-            font-weight: bold; 
-            color: #065f46;
-        }
-        .sales-table { 
-            width: 100%; 
-            border-collapse: collapse; 
-            margin-top: 20px;
-        }
-        .sales-table th, .sales-table td { 
-            border: 1px solid #d1fae5; 
-            padding: 12px; 
-            text-align: left;
-        }
-        .sales-table th { 
-            background-color: #059669; 
-            color: white;
-            font-weight: bold;
-        }
-        .sales-table tr:nth-child(even) { 
-            background-color: #f0fdf4;
-        }
-        .sales-table tr:hover { 
-            background-color: #ecfdf5;
-        }
-        .footer { 
-            margin-top: 30px; 
-            text-align: center; 
-            color: #6b7280;
-            border-top: 1px solid #d1fae5;
-            padding-top: 20px;
-        }
-        .summary { 
-            background-color: #ecfdf5; 
-            padding: 20px; 
-            border-radius: 8px; 
-            margin-bottom: 20px;
-            border-left: 4px solid #059669;
-        }
-        @media print {
-            body { margin: 0; }
-            .header { page-break-after: avoid; }
-        }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <h1>${businessName}</h1>
-        <h2>Sales Report - ${periodText}</h2>
-        <p>Generated on ${reportDate}</p>
-    </div>
-
-    <div class="summary">
-        <h3 style="margin-top: 0; color: #059669;">Report Summary</h3>
-        <p><strong>Period:</strong> ${periodText}</p>
-        <p><strong>Total Transactions:</strong> ${metrics.totalTransactions}</p>
-        <p><strong>Business Type:</strong> ${userType === "general" ? "General Shop" : "Wines & Spirits"}</p>
-    </div>
-
-    <div class="metrics">
-        <div class="metric-card">
-            <h3>Total Revenue</h3>
-            <div class="value">KSh ${metrics.totalRevenue.toLocaleString()}</div>
-        </div>
-        <div class="metric-card">
-            <h3>Total Transactions</h3>
-            <div class="value">${metrics.totalTransactions}</div>
-        </div>
-        <div class="metric-card">
-            <h3>Items Sold</h3>
-            <div class="value">${metrics.totalItems}</div>
-        </div>
-        <div class="metric-card">
-            <h3>Average Transaction</h3>
-            <div class="value">KSh ${Math.round(metrics.averageTransaction).toLocaleString()}</div>
-        </div>
-    </div>
-
-    <h3 style="color: #059669; margin-bottom: 15px;">Transaction Details</h3>
-    <table class="sales-table">
-        <thead>
-            <tr>
-                <th>Date & Time</th>
-                <th>Transaction ID</th>
-                <th>Items Sold</th>
-                <th>Amount (KSh)</th>
-            </tr>
-        </thead>
-        <tbody>
-            ${filteredSales
-              .map(
-                (sale) => `
-                <tr>
-                    <td>${new Date(sale.date).toLocaleString()}</td>
-                    <td>${sale.id.split("_")[1] || sale.id.substring(0, 8)}</td>
-                    <td>${getItemsSummary(sale)}</td>
-                    <td>${sale.total.toLocaleString()}</td>
-                </tr>
-            `,
-              )
-              .join("")}
-        </tbody>
-    </table>
-
-    <div class="footer">
-        <p>This report was generated by LindaBiz POS System</p>
-        <p>For support, contact: support@lindabiz.com</p>
-    </div>
-</body>
-</html>`
   }
 
   const getPeriodText = () => {

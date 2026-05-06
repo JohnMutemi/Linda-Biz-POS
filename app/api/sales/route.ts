@@ -115,10 +115,58 @@ export async function POST(request: Request) {
       }
 
       for (const item of items) {
+        const productRows = await sql`
+          SELECT quantity
+          FROM products
+          WHERE id = ${item.productId} AND user_id = ${userId}
+          LIMIT 1
+        `
+        if (productRows.length === 0) {
+          await sql`ROLLBACK`
+          return NextResponse.json({ error: `Product not found: ${item.productId}` }, { status: 400 })
+        }
+
+        const beforeQty = Number(productRows[0].quantity)
+        const requestedQty = Number(item.quantity)
+        if (!Number.isFinite(requestedQty) || requestedQty <= 0) {
+          await sql`ROLLBACK`
+          return NextResponse.json({ error: "Invalid item quantity" }, { status: 400 })
+        }
+
+        if (beforeQty < requestedQty) {
+          await sql`ROLLBACK`
+          return NextResponse.json({ error: `Insufficient stock for ${item.productName}` }, { status: 409 })
+        }
+
+        const afterQty = beforeQty - requestedQty
+
         await sql`
           UPDATE products
-          SET quantity = GREATEST(quantity - ${item.quantity}, 0)
+          SET quantity = ${afterQty}
           WHERE id = ${item.productId} AND user_id = ${userId}
+        `
+
+        await sql`
+          INSERT INTO inventory_movements (
+            user_id,
+            product_id,
+            reason,
+            quantity_change,
+            before_quantity,
+            after_quantity,
+            reference_type,
+            reference_id
+          )
+          VALUES (
+            ${userId},
+            ${item.productId},
+            ${"sale"},
+            ${-requestedQty},
+            ${beforeQty},
+            ${afterQty},
+            ${"sale"},
+            ${id}
+          )
         `
       }
 

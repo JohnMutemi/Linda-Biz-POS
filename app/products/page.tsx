@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -23,6 +23,8 @@ interface Product {
   quantity: number
   unit: string
   category: string
+  description?: string
+  reorderLevel?: number
   userType: "general" | "wines-spirits"
   userId: string
 }
@@ -47,6 +49,8 @@ export default function ProductsPage() {
     quantity: "",
     unit: "",
     category: "",
+    description: "",
+    reorderLevel: "5",
   })
 
   const router = useRouter()
@@ -145,7 +149,7 @@ export default function ProductsPage() {
     { name: "Chamdor", category: "Wine", suggestedPrice: 400, unit: "bottle" },
   ]
 
-  const loadProducts = async (userId: string) => {
+  const loadProducts = useCallback(async (userId: string) => {
     try {
       const response = await fetch(`/api/products?userId=${encodeURIComponent(userId)}`)
       if (!response.ok) {
@@ -160,7 +164,7 @@ export default function ProductsPage() {
         variant: "destructive",
       })
     }
-  }
+  }, [toast])
 
   useEffect(() => {
     // Get current user
@@ -170,7 +174,7 @@ export default function ProductsPage() {
       setUser(parsedUser)
       void loadProducts(parsedUser.id)
     }
-  }, [])
+  }, [loadProducts])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData((prev) => ({
@@ -220,6 +224,8 @@ export default function ProductsPage() {
       quantity,
       unit: formData.unit,
       category: formData.category,
+      description: formData.description,
+      reorderLevel: Number.parseInt(formData.reorderLevel || "5"),
       userType: user.userType,
       userId: user.id,
     }
@@ -232,9 +238,12 @@ export default function ProductsPage() {
           body: JSON.stringify(newProduct),
         })
         if (!response.ok) {
-          throw new Error("Failed to update product")
+          const data = await response.json().catch(() => null)
+          throw new Error(data?.error || "Failed to update product")
         }
         await loadProducts(user.id)
+        localStorage.setItem("lindabiz_last_inventory_update", Date.now().toString())
+        window.dispatchEvent(new Event("inventory-refresh"))
         toast({
           title: "Product updated",
           description: `${newProduct.name} has been updated successfully.`,
@@ -246,9 +255,12 @@ export default function ProductsPage() {
           body: JSON.stringify(newProduct),
         })
         if (!response.ok) {
-          throw new Error("Failed to add product")
+          const data = await response.json().catch(() => null)
+          throw new Error(data?.error || "Failed to add product")
         }
         await loadProducts(user.id)
+        localStorage.setItem("lindabiz_last_inventory_update", Date.now().toString())
+        window.dispatchEvent(new Event("inventory-refresh"))
         toast({
           title: "Product added",
           description: `${newProduct.name} has been added to your inventory.`,
@@ -262,6 +274,8 @@ export default function ProductsPage() {
         quantity: "",
         unit: "",
         category: "",
+        description: "",
+        reorderLevel: "5",
       })
       setIsAddDialogOpen(false)
       setEditingProduct(null)
@@ -283,6 +297,8 @@ export default function ProductsPage() {
       quantity: product.quantity.toString(),
       unit: product.unit,
       category: product.category,
+      description: product.description ?? "",
+      reorderLevel: (product.reorderLevel ?? 5).toString(),
     })
     setIsAddDialogOpen(true)
     setShowPopularItems(false)
@@ -296,9 +312,12 @@ export default function ProductsPage() {
           method: "DELETE",
         })
         if (!response.ok) {
-          throw new Error("Failed to delete product")
+          const data = await response.json().catch(() => null)
+          throw new Error(data?.error || "Failed to delete product")
         }
         await loadProducts(user.id)
+        localStorage.setItem("lindabiz_last_inventory_update", Date.now().toString())
+        window.dispatchEvent(new Event("inventory-refresh"))
         toast({
           title: "Product deleted",
           description: "Product has been removed from your inventory.",
@@ -409,6 +428,8 @@ export default function ProductsPage() {
                     quantity: "",
                     unit: "",
                     category: "",
+                    description: "",
+                    reorderLevel: "5",
                   })
                   setShowPopularItems(false)
                   setIsAddDialogOpen(true)
@@ -458,6 +479,8 @@ export default function ProductsPage() {
                       quantity: "",
                       unit: "",
                       category: "",
+                      description: "",
+                      reorderLevel: "5",
                     })
                     setShowPopularItems(false)
                     setIsAddDialogOpen(true)
@@ -478,63 +501,79 @@ export default function ProductsPage() {
                 </p>
                 <p className="text-xs text-emerald-700 mt-0.5">A curated, searchable inventory view inspired by clean admin dashboards.</p>
               </div>
-              {filteredProducts.map((product) => (
-                <Card key={product.id} className="bg-white/80 backdrop-blur-sm border-emerald-100 shadow-sm">
-                  <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 sm:p-6 gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-wrap items-center gap-2 mb-2">
-                        <h3 className="text-lg font-semibold text-emerald-900 truncate">{product.name}</h3>
-                        <Badge variant="outline" className="border-emerald-200 text-emerald-700 bg-emerald-50">
-                          {product.category}
-                        </Badge>
-                        <Badge
-                          variant={
-                            product.quantity === 0 ? "destructive" : product.quantity <= 5 ? "secondary" : "default"
-                          }
-                          className={
-                            product.quantity === 0
-                              ? ""
-                              : product.quantity <= 5
-                                ? "bg-amber-100 text-amber-800 border-amber-200"
-                                : "bg-emerald-100 text-emerald-800 border-emerald-200"
-                          }
-                        >
-                          {product.quantity === 0 ? "Out of Stock" : product.quantity <= 5 ? "Low Stock" : "In Stock"}
-                        </Badge>
-                      </div>
-                      <div className="text-sm text-emerald-700 space-y-1">
-                        <div className="flex flex-wrap gap-4">
-                          <span className="font-medium">KSh {product.price.toLocaleString()}</span>
-                          <span>per {product.unit}</span>
-                          <span>
-                            {product.quantity} {product.unit}s available
-                          </span>
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {filteredProducts.map((product) => (
+                  <Card key={product.id} className="bg-white/85 backdrop-blur-sm border-emerald-100 shadow-sm">
+                    <CardContent className="p-4 sm:p-5 space-y-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <h3 className="text-base font-semibold text-emerald-900 truncate">{product.name}</h3>
+                          <div className="mt-1 flex flex-wrap items-center gap-2">
+                            <Badge variant="outline" className="border-emerald-200 text-emerald-700 bg-emerald-50">
+                              {product.category}
+                            </Badge>
+                            <Badge
+                              variant={product.quantity === 0 ? "destructive" : product.quantity <= 5 ? "secondary" : "default"}
+                              className={
+                                product.quantity === 0
+                                  ? ""
+                                  : product.quantity <= 5
+                                    ? "bg-amber-100 text-amber-800 border-amber-200"
+                                    : "bg-emerald-100 text-emerald-800 border-emerald-200"
+                              }
+                            >
+                              {product.quantity === 0 ? "Out of Stock" : product.quantity <= 5 ? "Low Stock" : "In Stock"}
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEdit(product)}
+                            className="border-emerald-200 hover:bg-emerald-50 text-emerald-700"
+                          >
+                            <Edit className="h-4 w-4" />
+                            <span className="sr-only">Edit</span>
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDelete(product.id)}
+                            className="border-red-200 hover:bg-red-50 text-red-600"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            <span className="sr-only">Delete</span>
+                          </Button>
                         </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEdit(product)}
-                        className="border-emerald-200 hover:bg-emerald-50 text-emerald-700"
-                      >
-                        <Edit className="h-4 w-4 sm:mr-2" />
-                        <span className="hidden sm:inline">Edit</span>
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDelete(product.id)}
-                        className="border-red-200 hover:bg-red-50 text-red-600"
-                      >
-                        <Trash2 className="h-4 w-4 sm:mr-2" />
-                        <span className="hidden sm:inline">Delete</span>
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+
+                      <div className="grid grid-cols-2 gap-3 rounded-xl border border-emerald-100 bg-emerald-50/30 p-3 text-sm">
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Price</p>
+                          <p className="font-semibold text-emerald-900">KSh {product.price.toLocaleString()}</p>
+                          <p className="text-xs text-emerald-700">per {product.unit}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Stock</p>
+                          <p className="font-semibold text-emerald-900">
+                            {product.quantity} {product.unit}
+                            {product.quantity === 1 ? "" : "s"}
+                          </p>
+                          <p className="text-xs text-emerald-700">Reorder level: {product.reorderLevel ?? 5}</p>
+                        </div>
+                      </div>
+
+                      <div className="rounded-xl border border-emerald-100 bg-white/60 p-3">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Description</p>
+                        <p className="mt-1 text-sm text-emerald-900 whitespace-pre-wrap">
+                          {product.description?.trim() ? product.description : "—"}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
               {filteredProducts.length === 0 && (
                 <Card className="bg-white/80 backdrop-blur-sm border-emerald-100">
                   <CardContent className="py-10 text-center text-emerald-700">
@@ -704,6 +743,35 @@ export default function ProductsPage() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Input
+                id="description"
+                name="description"
+                value={formData.description}
+                onChange={handleInputChange}
+                placeholder="Summary + key specs (e.g., brand, size, notes)"
+                className="border-emerald-200 focus:border-emerald-400"
+              />
+              <p className="text-xs text-emerald-600">
+                Tip: separate details with commas, or new lines for easy reading.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="reorderLevel">Reorder level</Label>
+              <Input
+                id="reorderLevel"
+                name="reorderLevel"
+                type="number"
+                value={formData.reorderLevel}
+                onChange={handleInputChange}
+                placeholder="5"
+                min={0}
+                className="border-emerald-200 focus:border-emerald-400"
+              />
             </div>
 
             <div className="flex justify-end space-x-2 pt-4">

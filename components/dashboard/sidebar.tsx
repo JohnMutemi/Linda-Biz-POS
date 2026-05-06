@@ -48,19 +48,19 @@ export function Sidebar() {
           <Button
             variant="ghost"
             size="icon"
-            className="lg:hidden fixed left-4 top-4 z-50 bg-white/80 backdrop-blur-sm border border-emerald-200 hover:bg-emerald-50"
+            className="lg:hidden fixed left-4 top-4 z-50 bg-white/70 backdrop-blur-xl border border-white/50 shadow-sm shadow-emerald-200/60 hover:bg-white/80"
           >
             <Menu className="h-5 w-5 text-emerald-700" />
             <span className="sr-only">Toggle menu</span>
           </Button>
         </SheetTrigger>
-        <SheetContent side="left" className="w-[280px] p-0 bg-white/95 backdrop-blur-sm border-emerald-200 z-50">
+        <SheetContent side="left" className="w-[280px] p-0 bg-white/75 backdrop-blur-xl border-white/40 z-50">
           <MobileSidebar user={user} navigation={navigation} />
         </SheetContent>
       </Sheet>
 
       {/* Desktop Sidebar */}
-      <div className="hidden lg:flex lg:flex-col lg:w-72 lg:fixed lg:inset-y-0 lg:z-30 border-r border-emerald-200 bg-white/95 backdrop-blur-sm shadow-sm">
+      <div className="hidden lg:flex lg:flex-col lg:w-72 lg:fixed lg:inset-y-0 lg:z-30 border-r border-white/40 bg-white/65 backdrop-blur-xl shadow-sm shadow-emerald-200/40">
         <DesktopSidebar user={user} navigation={navigation} />
       </div>
     </>
@@ -77,8 +77,8 @@ function MobileSidebar({
   const { confirmLogout } = useDashboard()
 
   return (
-    <div className="flex flex-col h-full bg-white/95 backdrop-blur-sm">
-      <div className="px-6 py-6 border-b border-emerald-200">
+    <div className="flex flex-col h-full bg-white/70 backdrop-blur-xl">
+      <div className="px-6 py-6 border-b border-white/40">
         <LindaBizLogo compact />
         <p className="mt-1 text-sm text-emerald-700">{user.businessName}</p>
       </div>
@@ -124,7 +124,7 @@ function MobileSidebar({
         </div>
         <Button
           variant="outline"
-          className="w-full justify-start border-emerald-200 hover:bg-emerald-50 text-emerald-700 relative z-10"
+          className="w-full justify-start border-rose-200 bg-rose-50/50 text-rose-700 hover:bg-rose-50 hover:text-rose-800 hover:border-rose-300 relative z-10"
           onClick={confirmLogout}
         >
           <LogOut className="mr-2 h-4 w-4" />
@@ -146,7 +146,7 @@ function DesktopSidebar({
 
   return (
     <div className="flex flex-col h-full relative">
-      <div className="px-6 py-6 border-b border-emerald-200">
+      <div className="px-6 py-6 border-b border-white/40">
         <LindaBizLogo compact />
         <p className="mt-1 text-sm text-emerald-700">{user.businessName}</p>
       </div>
@@ -193,7 +193,7 @@ function DesktopSidebar({
         </div>
         <Button
           variant="outline"
-          className="w-full justify-start border-emerald-200 hover:bg-emerald-50 text-emerald-700 relative z-10 cursor-pointer"
+          className="w-full justify-start border-rose-200 bg-rose-50/50 text-rose-700 hover:bg-rose-50 hover:text-rose-800 hover:border-rose-300 relative z-10 cursor-pointer"
           onClick={confirmLogout}
         >
           <LogOut className="mr-2 h-4 w-4" />

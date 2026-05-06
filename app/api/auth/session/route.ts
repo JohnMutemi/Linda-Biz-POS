@@ -16,7 +16,18 @@ export async function GET(request: Request) {
 
     const sql = await db()
     const users = await sql`
-      SELECT id, name, email, phone, business_name, location, user_type, registration_date, approval_status
+      SELECT
+        id,
+        name,
+        email,
+        phone,
+        business_name,
+        location,
+        user_type,
+        registration_date,
+        approval_status,
+        suspended_at,
+        deleted_at
       FROM users
       WHERE id = ${session.userId}
       LIMIT 1
@@ -28,6 +39,9 @@ export async function GET(request: Request) {
 
     const user = users[0]
     const isAdmin = isAdminEmail(user.email)
+    if (!isAdmin && (user.deleted_at || user.suspended_at)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
     if (!isAdmin && user.approval_status !== "approved") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }

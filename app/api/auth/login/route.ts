@@ -21,7 +21,20 @@ export async function POST(request: Request) {
 
     const sql = await db()
     const users = await sql`
-      SELECT id, name, email, password, phone, business_name, location, user_type, registration_date, approval_status
+      SELECT
+        id,
+        name,
+        email,
+        password,
+        phone,
+        business_name,
+        location,
+        user_type,
+        registration_date,
+        approval_status,
+        terms_accepted_at,
+        suspended_at,
+        deleted_at
       FROM users
       WHERE email = ${email}
       LIMIT 1
@@ -49,10 +62,27 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid email or password" }, { status: 401 })
     }
     const isAdmin = isAdminEmail(user.email)
+    if (!isAdmin && user.deleted_at) {
+      return NextResponse.json({ error: "Account not available." }, { status: 403 })
+    }
+    if (!isAdmin && user.suspended_at) {
+      return NextResponse.json({ error: "Account suspended. Please contact support." }, { status: 403 })
+    }
     if (!isAdmin && user.approval_status !== "approved") {
       return NextResponse.json(
         { error: "Your registration is pending admin approval. Please wait for your login access email." },
         { status: 403 },
+      )
+    }
+
+    if (!isAdmin && !user.terms_accepted_at) {
+      return NextResponse.json(
+        {
+          error: "Terms acceptance required.",
+          requiresTerms: true,
+          email: user.email,
+        },
+        { status: 428 },
       )
     }
 

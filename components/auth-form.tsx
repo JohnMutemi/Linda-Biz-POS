@@ -11,10 +11,14 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Store, User, Mail, Lock, Phone, MapPin, Eye, EyeOff } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 export function AuthForm() {
   const [activeTab, setActiveTab] = useState("login")
   const [showPassword, setShowPassword] = useState(false)
+  const [resetOpen, setResetOpen] = useState(false)
+  const [resetEmail, setResetEmail] = useState("")
+  const [resetBusy, setResetBusy] = useState(false)
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -98,6 +102,10 @@ export function AuthForm() {
 
       const data = await response.json()
       if (!response.ok) {
+        if (response.status === 428 && data?.requiresTerms) {
+          router.push(`/terms?email=${encodeURIComponent(formData.email)}`)
+          return
+        }
         if (response.status === 403) {
           throw new Error(data.error || "Your account is pending approval.")
         }
@@ -118,6 +126,46 @@ export function AuthForm() {
         description: error instanceof Error ? error.message : "Unable to login.",
         variant: "destructive",
       })
+    }
+  }
+
+  const requestPasswordReset = async () => {
+    const email = resetEmail.trim() || formData.email.trim()
+    if (!email) {
+      toast({
+        title: "Email required",
+        description: "Enter your registered email to reset your password.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setResetBusy(true)
+    try {
+      const response = await fetch("/api/auth/password-reset/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      })
+      if (!response.ok) {
+        const data = await response.json().catch(() => null)
+        throw new Error(data?.error || "Failed to send reset email")
+      }
+
+      toast({
+        title: "Check your email",
+        description: "If your email is registered, a password reset link has been sent.",
+      })
+      setResetOpen(false)
+      setResetEmail("")
+    } catch (error) {
+      toast({
+        title: "Request failed",
+        description: error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setResetBusy(false)
     }
   }
 
@@ -188,6 +236,18 @@ export function AuthForm() {
                       <Eye className="h-4 w-4 text-gray-400" />
                     )}
                   </Button>
+                </div>
+                <div className="flex items-center justify-end">
+                  <button
+                    type="button"
+                    className="text-xs font-semibold text-emerald-700 hover:text-emerald-600"
+                    onClick={() => {
+                      setResetEmail(formData.email)
+                      setResetOpen(true)
+                    }}
+                  >
+                    Forgot password?
+                  </button>
                 </div>
               </div>
 
@@ -348,6 +408,39 @@ export function AuthForm() {
           )}
         </div>
       </CardContent>
+
+      <Dialog open={resetOpen} onOpenChange={setResetOpen}>
+        <DialogContent className="bg-white/95 backdrop-blur-sm border-emerald-100">
+          <DialogHeader>
+            <DialogTitle className="text-emerald-900">Reset your password</DialogTitle>
+            <DialogDescription className="text-emerald-700">
+              Enter your registered email and we&apos;ll send a reset link.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <Label htmlFor="reset-email">Email</Label>
+              <Input
+                id="reset-email"
+                type="email"
+                value={resetEmail}
+                onChange={(e) => setResetEmail(e.target.value)}
+                className="border-emerald-200 focus:border-emerald-400"
+                placeholder="you@business.com"
+              />
+            </div>
+            <Button
+              type="button"
+              onClick={requestPasswordReset}
+              disabled={resetBusy}
+              className="w-full bg-emerald-600 hover:bg-emerald-700"
+            >
+              {resetBusy ? "Sending..." : "Send reset link"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Card>
   )
 }
