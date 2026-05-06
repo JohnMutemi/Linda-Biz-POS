@@ -13,6 +13,8 @@ export interface User {
   name: string
   email: string
   userType: UserType
+  approvalStatus?: "pending" | "approved" | "rejected"
+  isAdmin?: boolean
   businessName: string
   phone?: string
   location?: string
@@ -41,7 +43,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     const loadUser = async () => {
       try {
         // Only check for user authentication on protected routes
-        const protectedRoutes = ["/dashboard", "/products", "/sales", "/settings", "/profile"]
+        const protectedRoutes = ["/dashboard", "/products", "/sales", "/settings", "/profile", "/admin"]
         const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route))
 
         if (!isProtectedRoute) {
@@ -63,7 +65,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem("lindabiz_user", JSON.stringify(currentUser))
       } catch (error) {
         console.error("Error loading user data:", error)
-        const protectedRoutes = ["/dashboard", "/products", "/sales", "/settings", "/profile"]
+        const protectedRoutes = ["/dashboard", "/products", "/sales", "/settings", "/profile", "/admin"]
         const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route))
         if (isProtectedRoute) {
           router.push("/")

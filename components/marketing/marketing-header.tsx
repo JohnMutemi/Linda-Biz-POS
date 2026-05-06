@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils"
 import { LindaBizLogo } from "@/components/brand/lindabiz-logo"
 
 const navItems = [
+  { label: "Home", href: "/" },
   { label: "Features", href: "/features" },
   { label: "Solutions", href: "/solutions" },
   { label: "Pricing", href: "/pricing" },
@@ -20,10 +21,10 @@ export function MarketingHeader() {
   const pathname = usePathname()
 
   return (
-    <header className="sticky top-3 z-30 flex items-center justify-between gap-3 rounded-2xl border border-emerald-100 bg-white/80 px-3 py-2 shadow-sm backdrop-blur-md md:px-4">
+    <header className="sticky top-0 z-50 flex items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-white/95 px-3 py-2 shadow-md shadow-emerald-100/70 backdrop-blur-md md:px-4">
       <LindaBizLogo />
 
-      <nav className="hidden items-center gap-7 text-sm font-medium text-slate-700 lg:flex">
+      <nav className="hidden items-center gap-7 text-sm font-semibold text-slate-800 lg:flex">
         {navItems.map((item) => {
           const active = pathname === item.href
           return (
@@ -42,13 +43,13 @@ export function MarketingHeader() {
         <div className="hidden items-center gap-2 sm:flex">
           <Link
             href="/login?tab=login"
-            className="rounded-lg border border-emerald-200 bg-white/80 px-4 py-2 text-sm font-semibold text-emerald-700 shadow-sm backdrop-blur-sm hover:bg-emerald-50"
+            className="rounded-lg border border-emerald-300 bg-white px-4 py-2 text-sm font-semibold text-emerald-800 shadow-sm hover:bg-emerald-50"
           >
             Login
           </Link>
           <Link
             href="/login?tab=signup"
-            className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-500"
+            className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-600"
           >
             Sign up
           </Link>

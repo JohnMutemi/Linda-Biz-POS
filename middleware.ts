@@ -16,26 +16,34 @@ function getJwtSecret() {
 export async function middleware(request: NextRequest) {
   const sessionCookie = request.cookies.get(getSessionCookieName())?.value
   let isAuthenticated = false
+  let isAdmin = false
 
   if (sessionCookie) {
     try {
-      await jwtVerify(sessionCookie, getJwtSecret())
+      const { payload } = await jwtVerify(sessionCookie, getJwtSecret())
       isAuthenticated = true
+      isAdmin = payload.isAdmin === true
     } catch {
       isAuthenticated = false
+      isAdmin = false
     }
   }
 
+  const pathname = request.nextUrl.pathname
+  const isProtectedRoute =
+    pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/products") ||
+    pathname.startsWith("/sales") ||
+    pathname.startsWith("/settings") ||
+    pathname.startsWith("/profile")
+  const isAdminRoute = pathname.startsWith("/admin")
+
   // If the user is not logged in and trying to access protected routes, redirect to login
-  if (
-    !isAuthenticated &&
-    (request.nextUrl.pathname.startsWith("/dashboard") ||
-      request.nextUrl.pathname.startsWith("/products") ||
-      request.nextUrl.pathname.startsWith("/sales") ||
-      request.nextUrl.pathname.startsWith("/settings") ||
-      request.nextUrl.pathname.startsWith("/profile"))
-  ) {
+  if (!isAuthenticated && (isProtectedRoute || isAdminRoute)) {
     return NextResponse.redirect(new URL("/", request.url))
+  }
+  if (isAdminRoute && !isAdmin) {
+    return NextResponse.redirect(new URL("/dashboard", request.url))
   }
 
   return NextResponse.next()
@@ -46,5 +54,5 @@ function getSessionCookieName() {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/products/:path*", "/sales/:path*", "/settings/:path*", "/profile/:path*"],
+  matcher: ["/dashboard/:path*", "/products/:path*", "/sales/:path*", "/settings/:path*", "/profile/:path*", "/admin/:path*"],
 }

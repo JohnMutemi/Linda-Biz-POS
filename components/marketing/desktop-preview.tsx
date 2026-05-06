@@ -13,7 +13,7 @@ export function DesktopPreview({ className }: { className?: string }) {
     >
       <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl bg-emerald-50">
         <Image
-          src="/lindabiz-desktop-preview.svg"
+          src="https://res.cloudinary.com/dhxtzhs6h/image/upload/v1778094443/ChatGPT_Image_May_6_2026_10_06_34_PM_lov84j.png"
           alt="Desktop appearance"
           fill
           className="object-contain object-center"

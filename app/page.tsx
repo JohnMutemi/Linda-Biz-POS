@@ -18,7 +18,7 @@ export default function Home() {
         if (response.ok) {
           const user = await response.json()
           localStorage.setItem("lindabiz_user", JSON.stringify(user))
-          router.push("/dashboard")
+          router.push(user.isAdmin ? "/admin" : "/dashboard")
           return
         }
       } catch (error) {
@@ -41,7 +41,7 @@ export default function Home() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-emerald-50">
+    <div className="relative min-h-screen bg-emerald-50">
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute left-[-140px] top-[-120px] h-[340px] w-[340px] rounded-full bg-emerald-300/40 blur-3xl" />
         <div className="absolute bottom-[-100px] right-[-80px] h-[280px] w-[280px] rounded-full bg-emerald-300/40 blur-3xl" />

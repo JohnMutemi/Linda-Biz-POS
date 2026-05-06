@@ -1,4 +1,6 @@
 import { neon } from "@neondatabase/serverless"
+import { getAdminEmails } from "@/lib/admin"
+import { hashPassword, isPasswordHash } from "@/lib/auth"
 
 let initialized = false
 
@@ -25,9 +27,98 @@ export async function initDatabase() {
       business_name TEXT NOT NULL,
       location TEXT,
       user_type TEXT NOT NULL DEFAULT 'general',
-      registration_date TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      registration_date TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      approval_status TEXT NOT NULL DEFAULT 'pending',
+      approved_at TIMESTAMPTZ,
+      approved_by TEXT,
+      login_route_token TEXT,
+      login_route_sent_at TIMESTAMPTZ
     )
   `
+
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS approval_status TEXT NOT NULL DEFAULT 'pending'`
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS approved_at TIMESTAMPTZ`
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS approved_by TEXT`
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS login_route_token TEXT`
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS login_route_sent_at TIMESTAMPTZ`
+
+  const adminEmails = Array.from(getAdminEmails())
+  const adminSeedPassword = process.env.ADMIN_DEFAULT_PASSWORD
+  const adminSeedName = process.env.ADMIN_DEFAULT_NAME || "System Admin"
+  const adminSeedBusiness = process.env.ADMIN_DEFAULT_BUSINESS || "LindaBiz Administration"
+
+  for (const adminEmail of adminEmails) {
+    const existing = await sql`
+      SELECT id, password
+      FROM users
+      WHERE email = ${adminEmail}
+      LIMIT 1
+    `
+
+    if (existing.length === 0) {
+      if (!adminSeedPassword) {
+        continue
+      }
+
+      const id = `admin_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+      const passwordHash = await hashPassword(adminSeedPassword)
+      await sql`
+        INSERT INTO users (
+          id,
+          name,
+          email,
+          password,
+          business_name,
+          user_type,
+          registration_date,
+          approval_status,
+          approved_at,
+          approved_by
+        )
+        VALUES (
+          ${id},
+          ${adminSeedName},
+          ${adminEmail},
+          ${passwordHash},
+          ${adminSeedBusiness},
+          ${"general"},
+          NOW(),
+          ${"approved"},
+          NOW(),
+          ${adminEmail}
+        )
+      `
+      continue
+    }
+
+    const currentPassword = existing[0].password as string
+    let nextPassword = currentPassword
+    if (adminSeedPassword && !isPasswordHash(currentPassword)) {
+      nextPassword = await hashPassword(currentPassword)
+    }
+
+    await sql`
+      UPDATE users
+      SET
+        approval_status = ${"approved"},
+        approved_at = COALESCE(approved_at, NOW()),
+        approved_by = COALESCE(approved_by, ${adminEmail}),
+        password = ${nextPassword}
+      WHERE id = ${existing[0].id}
+    `
+  }
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS admin_audit_logs (
+      id BIGSERIAL PRIMARY KEY,
+      client_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      admin_email TEXT NOT NULL,
+      action TEXT NOT NULL,
+      note TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `
+  await sql`CREATE INDEX IF NOT EXISTS admin_audit_logs_client_id_idx ON admin_audit_logs(client_id, created_at DESC)`
 
   await sql`
     CREATE TABLE IF NOT EXISTS products (

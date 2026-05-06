@@ -2,7 +2,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { LayoutDashboard, Package, ShoppingCart, Settings, ChevronRight, Menu, LogOut } from "lucide-react"
+import { LayoutDashboard, Package, ShoppingCart, Settings, ChevronRight, Menu, LogOut, Shield } from "lucide-react"
 import { useDashboard } from "./dashboard-provider"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
@@ -38,6 +38,14 @@ export function Sidebar() {
       current: pathname === "/settings",
     },
   ]
+  if (user?.isAdmin) {
+    navigation.push({
+      name: "Admin",
+      href: "/admin",
+      icon: Shield,
+      current: pathname === "/admin",
+    })
+  }
 
   if (!user) return null
 

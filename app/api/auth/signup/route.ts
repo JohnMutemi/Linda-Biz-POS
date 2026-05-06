@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     const passwordHash = await hashPassword(password)
 
     await sql`
-      INSERT INTO users (id, name, email, password, phone, business_name, location, user_type, registration_date)
+      INSERT INTO users (id, name, email, password, phone, business_name, location, user_type, registration_date, approval_status)
       VALUES (
         ${id},
         ${name},
@@ -34,7 +34,8 @@ export async function POST(request: Request) {
         ${businessName},
         ${location ?? null},
         ${"general"},
-        ${registrationDate}
+        ${registrationDate},
+        ${"pending"}
       )
     `
 
@@ -46,6 +47,7 @@ export async function POST(request: Request) {
       businessName,
       location: location ?? "",
       userType: "general",
+      approvalStatus: "pending",
       isNewUser: true,
       registrationDate,
     })

@@ -29,8 +29,12 @@ export function AuthForm() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const tab = params.get("tab")
+    const email = params.get("email")
     if (tab === "signup" || tab === "login") {
       setActiveTab(tab)
+    }
+    if (email) {
+      setFormData((prev) => ({ ...prev, email }))
     }
   }, [])
 
@@ -57,8 +61,8 @@ export function AuthForm() {
       }
 
       toast({
-        title: "Registration successful",
-        description: "Your account has been created. Please login with your credentials.",
+        title: "Registration submitted",
+        description: "Your account is pending admin approval. You'll receive a login access email once approved.",
       })
 
       setActiveTab("login")
@@ -94,6 +98,9 @@ export function AuthForm() {
 
       const data = await response.json()
       if (!response.ok) {
+        if (response.status === 403) {
+          throw new Error(data.error || "Your account is pending approval.")
+        }
         throw new Error(data.error || "Login failed")
       }
 
@@ -104,7 +111,7 @@ export function AuthForm() {
         description: `Welcome back, ${data.name}!`,
       })
 
-      router.push("/dashboard")
+      router.push(data.isAdmin ? "/admin" : "/dashboard")
     } catch (error) {
       toast({
         title: "Login failed",

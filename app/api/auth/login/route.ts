@@ -8,6 +8,7 @@ import {
   verifyPassword,
   hashPassword,
 } from "@/lib/auth"
+import { isAdminEmail } from "@/lib/admin"
 
 export async function POST(request: Request) {
   try {
@@ -20,7 +21,7 @@ export async function POST(request: Request) {
 
     const sql = await db()
     const users = await sql`
-      SELECT id, name, email, password, phone, business_name, location, user_type, registration_date
+      SELECT id, name, email, password, phone, business_name, location, user_type, registration_date, approval_status
       FROM users
       WHERE email = ${email}
       LIMIT 1
@@ -47,8 +48,15 @@ export async function POST(request: Request) {
     if (!isValidPassword) {
       return NextResponse.json({ error: "Invalid email or password" }, { status: 401 })
     }
+    const isAdmin = isAdminEmail(user.email)
+    if (!isAdmin && user.approval_status !== "approved") {
+      return NextResponse.json(
+        { error: "Your registration is pending admin approval. Please wait for your login access email." },
+        { status: 403 },
+      )
+    }
 
-    const token = await createSessionToken({ userId: user.id, email: user.email })
+    const token = await createSessionToken({ userId: user.id, email: user.email, isAdmin })
     const response = NextResponse.json({
       id: user.id,
       name: user.name,
@@ -57,6 +65,8 @@ export async function POST(request: Request) {
       businessName: user.business_name,
       location: user.location ?? "",
       userType: user.user_type,
+      approvalStatus: user.approval_status,
+      isAdmin,
       registrationDate: user.registration_date,
     })
 

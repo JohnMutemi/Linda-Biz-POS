@@ -7,6 +7,7 @@ const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 // 24 hours
 export type SessionPayload = {
   userId: string
   email: string
+  isAdmin?: boolean
 }
 
 function getJwtSecret() {
@@ -49,12 +50,13 @@ export async function verifySessionToken(token: string) {
   const { payload } = await jwtVerify(token, getJwtSecret())
   const userId = payload.userId
   const email = payload.email
+  const isAdmin = payload.isAdmin
 
   if (typeof userId !== "string" || typeof email !== "string") {
     throw new Error("Invalid token payload")
   }
 
-  return { userId, email }
+  return { userId, email, isAdmin: isAdmin === true }
 }
 
 export function getSessionTokenFromCookieHeader(cookieHeader: string | null) {

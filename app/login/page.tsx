@@ -18,7 +18,7 @@ export default function LoginPage() {
         if (response.ok) {
           const user = await response.json()
           localStorage.setItem("lindabiz_user", JSON.stringify(user))
-          router.push("/dashboard")
+          router.push(user.isAdmin ? "/admin" : "/dashboard")
           return
         }
       } catch (error) {
@@ -41,7 +41,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-emerald-50">
+    <div className="relative min-h-screen bg-emerald-50">
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute left-[-140px] top-[-120px] h-[340px] w-[340px] rounded-full bg-emerald-300/40 blur-3xl" />
         <div className="absolute bottom-[-100px] right-[-80px] h-[280px] w-[280px] rounded-full bg-emerald-300/40 blur-3xl" />
@@ -59,6 +59,9 @@ export default function LoginPage() {
             <p className="mt-5 max-w-sm text-sm text-slate-600">
               Welcome back. Sign in to access your dashboard, manage inventory, and track daily sales.
             </p>
+            <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              Approved clients only: new registrations must be reviewed by admin before login is enabled.
+            </div>
             <Link href="/" className="mt-4 inline-block text-sm font-medium text-emerald-600 hover:text-emerald-500">
               Back Home
             </Link>
