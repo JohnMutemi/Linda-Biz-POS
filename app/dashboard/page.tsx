@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -18,8 +18,14 @@ import {
   Wine,
   Beer,
   ArrowRight,
+  BarChart3,
+  LayoutDashboard,
 } from "lucide-react"
 import { useDashboard } from "@/components/dashboard/dashboard-provider"
+import { useDashboardTheme } from "@/components/dashboard/dashboard-theme-provider"
+import { DASHBOARD_THEMES, type DashboardThemeId, type DashboardThemeClasses } from "@/lib/dashboard-theme"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { SalesHistory } from "@/components/sales-history"
 import { BusinessTip } from "@/components/business-tip"
@@ -46,8 +52,12 @@ interface Sale {
   itemCount?: number
 }
 
+const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000
+
 export default function Dashboard() {
   const { user, loading } = useDashboard()
+  const { t, themeId, setThemeId } = useDashboardTheme()
+  const [dashboardTab, setDashboardTab] = useState<"overview" | "analytics">("overview")
   const [products, setProducts] = useState<Product[]>([])
   const [sales, setSales] = useState<Sale[]>([])
   const [todaySales, setTodaySales] = useState(0)
@@ -150,6 +160,14 @@ export default function Dashboard() {
     }
   }, [user])
 
+  const recentSales = useMemo(
+    () => sales.filter((s) => Date.now() - new Date(s.date).getTime() <= THIRTY_DAYS_MS),
+    [sales],
+  )
+  const revenue30 = useMemo(() => recentSales.reduce((sum, s) => sum + s.total, 0), [recentSales])
+  const count30 = recentSales.length
+  const avgOrder30 = count30 ? revenue30 / count30 : 0
+
   if (loading || !user) {
     return <DashboardSkeleton />
   }
@@ -158,35 +176,51 @@ export default function Dashboard() {
   const lowStockItems = products.filter((product) => product.quantity > 0 && product.quantity <= 5)
   const stockAlerts = [...outOfStockItems, ...lowStockItems]
 
-  const accentColor = "emerald"
-  const pieColors = ["#059669", "#10b981", "#34d399", "#6ee7b7", "#22c55e", "#16a34a", "#4ade80", "#86efac"]
+  const pieColors = t.chartPalette
+  const accentColor = "emerald" as const
 
   return (
-    <div className="min-h-screen relative">
-      <div className="fixed inset-0 -z-10 bg-emerald-50"></div>
-      <div className="fixed inset-0 -z-10">
-        <div className="absolute left-[-140px] top-[-120px] h-[340px] w-[340px] rounded-full bg-emerald-300/40 blur-3xl" />
-        <div className="absolute bottom-[-100px] right-[-80px] h-[280px] w-[280px] rounded-full bg-emerald-300/40 blur-3xl" />
-      </div>
+    <DashboardPageShell className="relative z-20">
+      <Tabs
+        value={dashboardTab}
+        onValueChange={(v) => setDashboardTab(v as "overview" | "analytics")}
+        className="space-y-6"
+      >
+        <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+          <TabsList
+            className={cn(
+              "grid h-auto w-full grid-cols-2 sm:inline-flex sm:w-auto sm:grid-cols-none p-1 rounded-lg",
+              t.tabList,
+            )}
+          >
+            <TabsTrigger value="overview" className={cn("gap-2 rounded-md", t.tabTrigger)}>
+              <LayoutDashboard className="h-4 w-4 shrink-0" />
+              Overview
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className={cn("gap-2 rounded-md", t.tabTrigger)}>
+              <BarChart3 className="h-4 w-4 shrink-0" />
+              Analytics
+            </TabsTrigger>
+          </TabsList>
+          <Select value={themeId} onValueChange={(v) => setThemeId(v as DashboardThemeId)}>
+            <SelectTrigger className={cn("w-full sm:w-[260px]", t.selectTrigger)}>
+              <SelectValue placeholder="Color theme" />
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.keys(DASHBOARD_THEMES) as DashboardThemeId[]).map((id) => (
+                <SelectItem key={id} value={id}>
+                  {DASHBOARD_THEMES[id].label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-      <DashboardPageShell className="relative z-20">
-        <header className="mb-8">
-          <div className="dashboard-sticky-header">
-            <div className="rounded-2xl border border-emerald-100 bg-white/70 px-5 py-4 shadow-sm shadow-emerald-100/60">
-              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Welcome</p>
-              <h1 className="mt-1 text-3xl font-bold tracking-tight text-emerald-900">
-                {user.name.split(" ")[0] ? `Hi, ${user.name.split(" ")[0]} —` : "Hi —"} here’s your business snapshot
-              </h1>
-              <p className="mt-2 text-emerald-700">
-                <span className="font-semibold text-emerald-900">{user.businessName}</span> · Track stock, process sales, and review performance.
-              </p>
-            </div>
-          </div>
-        </header>
-
+        <TabsContent value="overview" className="mt-0 space-y-8 ring-offset-0">
         {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <StatsCard
+            t={t}
             title="Total Stock Value"
             value={`KSh ${totalStockValue.toLocaleString()}`}
             description={`Across ${products.length} products`}
@@ -194,6 +228,7 @@ export default function Dashboard() {
             accentColor={accentColor}
           />
           <StatsCard
+            t={t}
             title="Today's Sales"
             value={`KSh ${todaySales.toLocaleString()}`}
             description={
@@ -219,6 +254,7 @@ export default function Dashboard() {
             accentColor={accentColor}
           />
           <StatsCard
+            t={t}
             title="Products in Stock"
             value={products.filter((p) => p.quantity > 0).length.toString()}
             description={`Out of ${products.length} total products`}
@@ -226,6 +262,7 @@ export default function Dashboard() {
             accentColor={accentColor}
           />
           <StatsCard
+            t={t}
             title="Stock Alerts"
             value={stockAlerts.length.toString()}
             description={stockAlerts.length > 0 ? "Items need attention" : "All stock levels are good"}
@@ -433,7 +470,7 @@ export default function Dashboard() {
               ) : (
                 <div className="space-y-3">
                   {products.slice(0, 5).map((product) => (
-                    <ProductItem key={product.id} product={product} userType={user.userType} />
+                    <ProductItem key={product.id} product={product} userType={user.userType} t={t} />
                   ))}
                 </div>
               )}
@@ -502,24 +539,92 @@ export default function Dashboard() {
           <SalesHistory userId={user.id} limit={5} />
         </div>
 
-        {/* Most Sold Items */}
-        <div className="mt-6">
-          <Card className="bg-white/80 backdrop-blur-sm border-emerald-100">
+        {/* Category Overview for Wines & Spirits */}
+        {user.userType === "wines-spirits" && (
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <CategoryCard
+              t={t}
+              title="Wines"
+              count={products.filter((p) => p.category?.toLowerCase() === "wine").length}
+              icon={<Wine className="h-5 w-5 text-emerald-500" />}
+            />
+            <CategoryCard
+              t={t}
+              title="Spirits"
+              count={products.filter((p) => p.category?.toLowerCase() === "spirits").length}
+              icon={<Package className="h-5 w-5 text-emerald-500" />}
+            />
+            <CategoryCard
+              t={t}
+              title="Beers"
+              count={products.filter((p) => p.category?.toLowerCase() === "beer").length}
+              icon={<Beer className="h-5 w-5 text-emerald-500" />}
+            />
+          </div>
+        )}
+
+        {/* Business Tip of the Day */}
+        <BusinessTip userType={user.userType} />
+        </TabsContent>
+
+        <TabsContent value="analytics" className="mt-0 space-y-6 ring-offset-0">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <Card className={cn(t.card, t.border)}>
+              <CardHeader className="pb-2">
+                <CardTitle className={cn("text-base font-semibold", t.cardTitle)}>30-day revenue</CardTitle>
+                <CardDescription className={t.cardDesc}>Sum of all sales in the last 30 days</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className={cn("text-2xl font-bold tabular-nums", t.textStrong)}>KSh {revenue30.toLocaleString()}</p>
+              </CardContent>
+            </Card>
+            <Card className={cn(t.card, t.border)}>
+              <CardHeader className="pb-2">
+                <CardTitle className={cn("text-base font-semibold", t.cardTitle)}>Sales count</CardTitle>
+                <CardDescription className={t.cardDesc}>Transactions in the last 30 days</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className={cn("text-2xl font-bold tabular-nums", t.textStrong)}>{count30}</p>
+              </CardContent>
+            </Card>
+            <Card className={cn(t.card, t.border)}>
+              <CardHeader className="pb-2">
+                <CardTitle className={cn("text-base font-semibold", t.cardTitle)}>Avg order value</CardTitle>
+                <CardDescription className={t.cardDesc}>Average per transaction (30 days)</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className={cn("text-2xl font-bold tabular-nums", t.textStrong)}>
+                  KSh {Math.round(avgOrder30).toLocaleString()}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className={cn(t.card, t.border)}>
             <CardHeader>
-              <CardTitle className="text-emerald-900">Most Sold Items (Last 30 Days)</CardTitle>
-              <CardDescription className="text-emerald-700">A quick performance snapshot of your best movers.</CardDescription>
+              <CardTitle className={t.cardTitle}>Most sold items (last 30 days)</CardTitle>
+              <CardDescription className={t.cardDesc}>
+                Each item uses a different color so you can compare at a glance.
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {topSold.length === 0 ? (
-                <div className="rounded-xl border border-emerald-100 bg-emerald-50/40 p-4 text-sm text-emerald-700">
+                <div className={cn("rounded-xl border p-4 text-sm", t.successBanner)}>
                   No sales data yet for this period.
                 </div>
               ) : (
                 <div className="grid gap-6 lg:grid-cols-2">
-                  <div className="h-72 w-full">
+                  <div className="h-72 w-full min-h-[200px]">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
-                        <Pie data={topSold} dataKey="quantitySold" nameKey="name" outerRadius={100} innerRadius={55} paddingAngle={3}>
+                        <Pie
+                          data={topSold}
+                          dataKey="quantitySold"
+                          nameKey="name"
+                          outerRadius={100}
+                          innerRadius={55}
+                          paddingAngle={3}
+                        >
                           {topSold.map((_, idx) => (
                             <Cell key={idx} fill={pieColors[idx % pieColors.length]} />
                           ))}
@@ -530,59 +635,56 @@ export default function Dashboard() {
                     </ResponsiveContainer>
                   </div>
                   <div className="space-y-2">
-                    {topSold.map((it, idx) => (
-                      <div key={it.name} className="flex items-center justify-between rounded-lg border border-emerald-100 bg-white/60 px-3 py-2">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: pieColors[idx % pieColors.length] }} />
-                          <p className="text-sm font-medium text-emerald-900 truncate">{it.name}</p>
+                    {topSold.map((it, idx) => {
+                      const color = pieColors[idx % pieColors.length]
+                      return (
+                        <div
+                          key={it.name}
+                          className={cn(
+                            "flex items-center justify-between rounded-xl border px-3 py-3 shadow-sm backdrop-blur-sm transition-opacity",
+                            t.border,
+                          )}
+                          style={{
+                            background: `linear-gradient(90deg, ${color}22 0%, transparent 65%)`,
+                            borderLeftWidth: 4,
+                            borderLeftColor: color,
+                          }}
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <span
+                              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sm font-bold text-white shadow-inner"
+                              style={{ backgroundColor: color }}
+                            >
+                              {idx + 1}
+                            </span>
+                            <p className={cn("truncate text-sm font-medium", t.textStrong)}>{it.name}</p>
+                          </div>
+                          <Badge variant="outline" className={cn("shrink-0 border-current tabular-nums", t.textMuted)} style={{ color }}>
+                            {it.quantitySold} sold
+                          </Badge>
                         </div>
-                        <Badge variant="outline" className="border-emerald-200 text-emerald-700">
-                          {it.quantitySold}
-                        </Badge>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </div>
               )}
             </CardContent>
           </Card>
-        </div>
-
-        {/* Category Overview for Wines & Spirits */}
-        {user.userType === "wines-spirits" && (
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-            <CategoryCard
-              title="Wines"
-              count={products.filter((p) => p.category?.toLowerCase() === "wine").length}
-              icon={<Wine className="h-5 w-5 text-emerald-500" />}
-            />
-            <CategoryCard
-              title="Spirits"
-              count={products.filter((p) => p.category?.toLowerCase() === "spirits").length}
-              icon={<Package className="h-5 w-5 text-emerald-500" />}
-            />
-            <CategoryCard
-              title="Beers"
-              count={products.filter((p) => p.category?.toLowerCase() === "beer").length}
-              icon={<Beer className="h-5 w-5 text-emerald-500" />}
-            />
-          </div>
-        )}
-
-        {/* Business Tip of the Day */}
-        <BusinessTip userType={user.userType} />
+        </TabsContent>
+      </Tabs>
       </DashboardPageShell>
-    </div>
   )
 }
 
 function StatsCard({
+  t,
   title,
   value,
   description,
   icon,
   accentColor = "emerald",
 }: {
+  t: DashboardThemeClasses
   title: string
   value: string
   description: string
@@ -596,14 +698,14 @@ function StatsCard({
   }
 
   return (
-    <Card className="bg-white/70 backdrop-blur-sm border-emerald-100">
+    <Card className={cn(t.card, t.border)}>
       <CardContent className="p-6">
         <div className="flex items-center space-x-4">
           <div className={cn("p-2 rounded-full", colorMap[accentColor])}>{icon}</div>
           <div>
-            <p className="text-sm font-medium text-emerald-600">{title}</p>
-            <h3 className="text-2xl font-bold mt-1 text-emerald-900">{value}</h3>
-            <p className="text-xs text-emerald-600 mt-1">{description}</p>
+            <p className={cn("text-sm font-medium", t.textLabel)}>{title}</p>
+            <h3 className={cn("text-2xl font-bold mt-1", t.textStrong)}>{value}</h3>
+            <p className={cn("text-xs mt-1", t.textLabel)}>{description}</p>
           </div>
         </div>
       </CardContent>
@@ -611,15 +713,25 @@ function StatsCard({
   )
 }
 
-function CategoryCard({ title, count, icon }: { title: string; count: number; icon: React.ReactNode }) {
+function CategoryCard({
+  t,
+  title,
+  count,
+  icon,
+}: {
+  t: DashboardThemeClasses
+  title: string
+  count: number
+  icon: React.ReactNode
+}) {
   return (
-    <Card className="bg-white/70 backdrop-blur-sm border-emerald-100">
+    <Card className={cn(t.card, t.border)}>
       <CardContent className="p-6">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-emerald-600">{title}</p>
-            <h3 className="text-2xl font-bold mt-1 text-emerald-900">{count}</h3>
-            <p className="text-xs text-emerald-600 mt-1">{count === 1 ? "Product" : "Products"}</p>
+            <p className={cn("text-sm font-medium", t.textLabel)}>{title}</p>
+            <h3 className={cn("text-2xl font-bold mt-1", t.textStrong)}>{count}</h3>
+            <p className={cn("text-xs mt-1", t.textLabel)}>{count === 1 ? "Product" : "Products"}</p>
           </div>
           <div>{icon}</div>
         </div>
@@ -628,7 +740,15 @@ function CategoryCard({ title, count, icon }: { title: string; count: number; ic
   )
 }
 
-function ProductItem({ product, userType }: { product: Product; userType: "general" | "wines-spirits" }) {
+function ProductItem({
+  product,
+  userType,
+  t,
+}: {
+  product: Product
+  userType: "general" | "wines-spirits"
+  t: DashboardThemeClasses
+}) {
   const getStockStatus = () => {
     if (product.quantity === 0) {
       return { label: "Out of Stock", variant: "destructive" as const }
@@ -659,25 +779,31 @@ function ProductItem({ product, userType }: { product: Product; userType: "gener
   }
 
   return (
-    <div className="flex items-center justify-between p-4 border border-emerald-100 rounded-lg hover:bg-emerald-50/50 bg-white/50">
+    <div
+      className={cn(
+        "flex items-center justify-between p-4 border rounded-lg bg-white/50 hover:opacity-95",
+        t.border,
+        t.id === "dark" ? "hover:bg-slate-800/40" : "hover:bg-white/80",
+      )}
+    >
       <div className="flex items-center space-x-3">
         <div className={cn("p-2 rounded-full", userType === "general" ? "bg-emerald-50" : "bg-green-50")}>
           {getCategoryIcon()}
         </div>
         <div>
-          <p className="font-medium text-emerald-900">{product.name}</p>
+          <p className={cn("font-medium", t.textStrong)}>{product.name}</p>
           <div className="flex items-center mt-1">
-            <p className="text-sm text-emerald-700">
+            <p className={cn("text-sm", t.textMuted)}>
               KSh {product.price} per {product.unit}
             </p>
-            <Badge variant="outline" className="ml-2 text-xs border-emerald-200">
+            <Badge variant="outline" className={cn("ml-2 text-xs", t.border)}>
               {product.category}
             </Badge>
           </div>
         </div>
       </div>
       <div className="text-right">
-        <p className="font-medium text-emerald-900">
+        <p className={cn("font-medium", t.textStrong)}>
           {product.quantity} {product.unit}s
         </p>
         <Badge variant={status.variant} className={status.className}>
