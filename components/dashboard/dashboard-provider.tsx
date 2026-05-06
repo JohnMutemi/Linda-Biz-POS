@@ -42,9 +42,11 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const loadUser = async () => {
       try {
-        // Only check for user authentication on protected routes
+        const isAdminLoginRoute = pathname === "/admin/login"
+        // Only check for user authentication on protected routes.
+        // Keep /admin/login public so admins can sign in.
         const protectedRoutes = ["/dashboard", "/products", "/sales", "/settings", "/profile", "/admin"]
-        const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route))
+        const isProtectedRoute = !isAdminLoginRoute && protectedRoutes.some((route) => pathname.startsWith(route))
 
         if (!isProtectedRoute) {
           setLoading(false)
@@ -65,8 +67,9 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem("lindabiz_user", JSON.stringify(currentUser))
       } catch (error) {
         console.error("Error loading user data:", error)
+        const isAdminLoginRoute = pathname === "/admin/login"
         const protectedRoutes = ["/dashboard", "/products", "/sales", "/settings", "/profile", "/admin"]
-        const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route))
+        const isProtectedRoute = !isAdminLoginRoute && protectedRoutes.some((route) => pathname.startsWith(route))
         if (isProtectedRoute) {
           router.push("/")
         }
