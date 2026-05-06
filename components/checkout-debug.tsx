@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -16,7 +16,7 @@ export function CheckoutDebug({ userId }: { userId: string }) {
   const [debugData, setDebugData] = useState<DebugData>({ products: [], sales: [] })
   const [isVisible, setIsVisible] = useState(false)
 
-  const loadDebugData = () => {
+  const loadDebugData = useCallback(() => {
     const allProducts = JSON.parse(localStorage.getItem("lindabiz_products") || "[]")
     const allSales = JSON.parse(localStorage.getItem("lindabiz_sales") || "[]")
 
@@ -29,7 +29,7 @@ export function CheckoutDebug({ userId }: { userId: string }) {
       sales: userSales,
       lastSale,
     })
-  }
+  }, [userId])
 
   useEffect(() => {
     loadDebugData()
@@ -38,7 +38,7 @@ export function CheckoutDebug({ userId }: { userId: string }) {
     window.addEventListener("dashboard-refresh", handleRefresh)
 
     return () => window.removeEventListener("dashboard-refresh", handleRefresh)
-  }, [userId])
+  }, [loadDebugData])
 
   if (!isVisible) {
     return (

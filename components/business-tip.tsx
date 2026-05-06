@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Lightbulb, RefreshCw, X } from "lucide-react"
@@ -9,62 +9,60 @@ interface BusinessTipProps {
   userType: "general" | "wines-spirits"
 }
 
+const GENERAL_SHOP_TIPS = [
+  "Keep your most popular items at eye level to increase sales.",
+  "Track your inventory daily to avoid running out of bestsellers.",
+  "Offer bundle deals to increase your average transaction value.",
+  "Keep your shop clean and well-organized to attract more customers.",
+  "Build relationships with your suppliers for better pricing and terms.",
+  "Consider offering credit to trusted regular customers to build loyalty.",
+  "Display prices clearly to build customer trust and reduce haggling time.",
+  "Stock seasonal items ahead of time to maximize holiday sales.",
+  "Keep a customer feedback book to understand what products they want.",
+  "Rotate your stock regularly to ensure freshness, especially for perishables.",
+  "Use attractive displays near the entrance to draw customers in.",
+  "Keep small change ready to avoid losing sales due to payment issues.",
+  "Monitor your competitors' prices to stay competitive in the market.",
+  "Invest in good lighting to make your products more appealing.",
+  "Train yourself to upsell complementary items to increase revenue.",
+  "Keep emergency stock of fast-moving items to avoid stockouts.",
+  "Maintain good relationships with customers - word of mouth is powerful.",
+  "Consider opening early and closing late to capture more sales.",
+  "Keep detailed records of what sells best during different times.",
+  "Offer convenience services like mobile money to attract tech-savvy customers.",
+]
+
+const WINES_SPIRITS_TIPS = [
+  "Know your products well - customers appreciate knowledgeable recommendations.",
+  "Keep premium products secure but visible to prevent theft while encouraging sales.",
+  "Maintain proper storage conditions to preserve product quality and taste.",
+  "Build relationships with event planners and party organizers for bulk sales.",
+  "Offer gift wrapping services during holidays to add value.",
+  "Keep a variety of price points to cater to different customer budgets.",
+  "Learn about wine and spirit pairings to provide expert advice.",
+  "Stock popular local brands alongside international ones.",
+  "Offer loyalty programs for regular customers to encourage repeat business.",
+  "Keep your licenses and permits up to date to avoid legal issues.",
+  "Consider offering delivery services for large orders or events.",
+  "Display products by category and price range for easy browsing.",
+  "Keep track of expiration dates, especially for wines with vintage years.",
+  "Offer tasting events to introduce customers to new products.",
+  "Partner with local restaurants to supply their beverage needs.",
+  "Keep your shop well-lit and secure with proper surveillance.",
+  "Stock mixers and accessories to increase basket size.",
+  "Know the peak seasons for different types of alcohol sales.",
+  "Maintain good relationships with distributors for exclusive deals.",
+  "Consider offering corporate packages for office parties and events.",
+]
+
 export function BusinessTip({ userType }: BusinessTipProps) {
   const [tip, setTip] = useState("")
   const [isVisible, setIsVisible] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
 
-  // Business tips for general shops
-  const generalShopTips = [
-    "Keep your most popular items at eye level to increase sales.",
-    "Track your inventory daily to avoid running out of bestsellers.",
-    "Offer bundle deals to increase your average transaction value.",
-    "Keep your shop clean and well-organized to attract more customers.",
-    "Build relationships with your suppliers for better pricing and terms.",
-    "Consider offering credit to trusted regular customers to build loyalty.",
-    "Display prices clearly to build customer trust and reduce haggling time.",
-    "Stock seasonal items ahead of time to maximize holiday sales.",
-    "Keep a customer feedback book to understand what products they want.",
-    "Rotate your stock regularly to ensure freshness, especially for perishables.",
-    "Use attractive displays near the entrance to draw customers in.",
-    "Keep small change ready to avoid losing sales due to payment issues.",
-    "Monitor your competitors' prices to stay competitive in the market.",
-    "Invest in good lighting to make your products more appealing.",
-    "Train yourself to upsell complementary items to increase revenue.",
-    "Keep emergency stock of fast-moving items to avoid stockouts.",
-    "Maintain good relationships with customers - word of mouth is powerful.",
-    "Consider opening early and closing late to capture more sales.",
-    "Keep detailed records of what sells best during different times.",
-    "Offer convenience services like mobile money to attract tech-savvy customers.",
-  ]
-
-  // Business tips for wines & spirits
-  const winesSpiritsTips = [
-    "Know your products well - customers appreciate knowledgeable recommendations.",
-    "Keep premium products secure but visible to prevent theft while encouraging sales.",
-    "Maintain proper storage conditions to preserve product quality and taste.",
-    "Build relationships with event planners and party organizers for bulk sales.",
-    "Offer gift wrapping services during holidays to add value.",
-    "Keep a variety of price points to cater to different customer budgets.",
-    "Learn about wine and spirit pairings to provide expert advice.",
-    "Stock popular local brands alongside international ones.",
-    "Offer loyalty programs for regular customers to encourage repeat business.",
-    "Keep your licenses and permits up to date to avoid legal issues.",
-    "Consider offering delivery services for large orders or events.",
-    "Display products by category and price range for easy browsing.",
-    "Keep track of expiration dates, especially for wines with vintage years.",
-    "Offer tasting events to introduce customers to new products.",
-    "Partner with local restaurants to supply their beverage needs.",
-    "Keep your shop well-lit and secure with proper surveillance.",
-    "Stock mixers and accessories to increase basket size.",
-    "Know the peak seasons for different types of alcohol sales.",
-    "Maintain good relationships with distributors for exclusive deals.",
-    "Consider offering corporate packages for office parties and events.",
-  ]
-
-  const generateTip = () => {
+  const generateTip = useCallback(() => {
     setIsLoading(true)
-    const tips = userType === "wines-spirits" ? winesSpiritsTips : generalShopTips
+    const tips = userType === "wines-spirits" ? WINES_SPIRITS_TIPS : GENERAL_SHOP_TIPS
     const randomTip = tips[Math.floor(Math.random() * tips.length)]
 
     // Simulate loading for better UX
@@ -72,7 +70,7 @@ export function BusinessTip({ userType }: BusinessTipProps) {
       setTip(randomTip)
       setIsLoading(false)
     }, 500)
-  }
+  }, [userType])
 
   useEffect(() => {
     // Check if user has seen a tip today
@@ -85,7 +83,7 @@ export function BusinessTip({ userType }: BusinessTipProps) {
       setIsVisible(true)
       localStorage.setItem("lindabiz_last_tip_date", today)
     }
-  }, [userType])
+  }, [generateTip])
 
   const handleDismiss = () => {
     setIsVisible(false)
