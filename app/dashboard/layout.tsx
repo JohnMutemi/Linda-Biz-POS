@@ -16,7 +16,9 @@ export default function DashboardLayout({
         <div className="absolute bottom-[-100px] right-[-80px] h-[280px] w-[280px] rounded-full bg-emerald-300/40 blur-3xl" />
       </div>
       <Sidebar />
-      <div className="relative z-10 flex-1 pl-16 pt-[max(4rem,env(safe-area-inset-top))] lg:pl-72 lg:pt-0">{children}</div>
+      <div className="relative z-10 flex-1 pl-16 pt-[calc(max(4rem,env(safe-area-inset-top))+3.25rem)] lg:pl-72 lg:pt-0">
+        {children}
+      </div>
     </div>
   )
 }

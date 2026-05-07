@@ -3,11 +3,11 @@
 import type React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
-import { LayoutDashboard, Package, ShoppingCart, Settings, ChevronRight, Menu, LogOut, PanelLeft } from "lucide-react"
+import { LayoutDashboard, Package, ShoppingCart, Settings, ChevronRight, LogOut, PanelLeft } from "lucide-react"
 import { useDashboard } from "./dashboard-provider"
-import { Sheet, SheetClose, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Sheet, SheetClose, SheetContent } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
 import { LindaBizLogo } from "@/components/brand/lindabiz-logo"
 
@@ -15,6 +15,9 @@ export function Sidebar() {
   const { user } = useDashboard()
   const pathname = usePathname()
   const [mobileExpanded, setMobileExpanded] = useState(false)
+  const [showMobileTopNav, setShowMobileTopNav] = useState(true)
+  const lastScrollYRef = useRef(0)
+  const scrollDeltaAccumulatorRef = useRef(0)
 
   const navigation = [
     {
@@ -43,6 +46,49 @@ export function Sidebar() {
     },
   ]
   if (!user) return null
+  const quickNavigation = useMemo(() => navigation.slice(0, 3), [navigation])
+
+  useEffect(() => {
+    const TOGGLE_THRESHOLD_PX = 28
+
+    const onScroll = () => {
+      const currentY = window.scrollY
+      if (mobileExpanded) {
+        setShowMobileTopNav(false)
+        lastScrollYRef.current = currentY
+        scrollDeltaAccumulatorRef.current = 0
+        return
+      }
+      if (currentY <= 8) {
+        setShowMobileTopNav(true)
+        lastScrollYRef.current = currentY
+        scrollDeltaAccumulatorRef.current = 0
+        return
+      }
+
+      const delta = currentY - lastScrollYRef.current
+      // Ignore tiny movement jitter and only toggle after clear intent.
+      if (Math.abs(delta) < 2) return
+
+      const sameDirection =
+        (scrollDeltaAccumulatorRef.current >= 0 && delta > 0) || (scrollDeltaAccumulatorRef.current <= 0 && delta < 0)
+      scrollDeltaAccumulatorRef.current = sameDirection ? scrollDeltaAccumulatorRef.current + delta : delta
+
+      if (scrollDeltaAccumulatorRef.current <= -TOGGLE_THRESHOLD_PX) {
+        setShowMobileTopNav(true)
+        scrollDeltaAccumulatorRef.current = 0
+      } else if (scrollDeltaAccumulatorRef.current >= TOGGLE_THRESHOLD_PX) {
+        setShowMobileTopNav(false)
+        scrollDeltaAccumulatorRef.current = 0
+      }
+
+      lastScrollYRef.current = currentY
+    }
+
+    onScroll()
+    window.addEventListener("scroll", onScroll, { passive: true })
+    return () => window.removeEventListener("scroll", onScroll)
+  }, [mobileExpanded])
 
   const brandHeader = (
     <SidebarBrandHeader businessName={user.businessName} />
@@ -50,6 +96,32 @@ export function Sidebar() {
 
   return (
     <>
+      <div
+        className={cn(
+          "fixed left-16 right-0 z-30 border-b border-emerald-100 bg-white/95 px-2 py-2 backdrop-blur-sm transition-transform duration-200 ease-out lg:hidden",
+          mobileExpanded || !showMobileTopNav ? "-translate-y-full" : "translate-y-0",
+        )}
+        style={{ top: "env(safe-area-inset-top)" }}
+      >
+        <nav className="grid grid-cols-3 gap-2">
+          {quickNavigation.map((item) => (
+            <Link
+              key={`quick-${item.name}`}
+              href={item.href}
+              className={cn(
+                "flex min-h-10 items-center justify-center gap-2 rounded-lg border px-2 text-xs font-semibold transition-colors touch-manipulation",
+                item.current
+                  ? "border-emerald-200 bg-emerald-100 text-emerald-800"
+                  : "border-emerald-100 bg-white text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800",
+              )}
+            >
+              <item.icon className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">{item.name}</span>
+            </Link>
+          ))}
+        </nav>
+      </div>
+
       <div className="fixed inset-y-0 left-0 z-40 flex w-16 flex-col border-r border-emerald-100 bg-white lg:hidden">
         <div className="flex h-16 items-center justify-center border-b border-emerald-100">
           <LindaBizLogo compact />
@@ -89,11 +161,6 @@ export function Sidebar() {
       </div>
 
       <Sheet open={mobileExpanded} onOpenChange={setMobileExpanded}>
-        <SheetTrigger asChild>
-          <Button className="hidden" aria-hidden="true" tabIndex={-1}>
-            <Menu className="h-4 w-4" />
-          </Button>
-        </SheetTrigger>
         <SheetContent
           side="left"
           className="w-[min(88vw,340px)] max-w-[min(88vw,340px)] p-0 bg-white border-r border-emerald-100 shadow-2xl z-50 pt-[env(safe-area-inset-top)]"
