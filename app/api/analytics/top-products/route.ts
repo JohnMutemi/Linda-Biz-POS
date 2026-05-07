@@ -46,15 +46,21 @@ export async function GET(request: Request) {
     const to = endOfDay(now)
 
     const sql = await db()
+    // Group by normalized product name so restocked/deleted-then-re-added SKUs (new UUID, same label)
+    // roll into one line, matching inventory merge rules on POST /api/products.
     const rows = await sql`
       SELECT
-        si.product_id,
-        MAX(si.product_name) AS product_name,
+        MIN(si.product_id) AS product_id,
+        COALESCE(MAX(NULLIF(TRIM(si.product_name), '')), 'Item') AS product_name,
         SUM(si.quantity)::INT AS quantity_sold
       FROM sale_items si
       INNER JOIN sales s ON s.id = si.sale_id
       WHERE s.user_id = ${userId} AND s.date >= ${from.toISOString()} AND s.date <= ${to.toISOString()}
-      GROUP BY si.product_id
+      GROUP BY
+        CASE
+          WHEN NULLIF(TRIM(COALESCE(si.product_name, '')), '') IS NOT NULL THEN LOWER(TRIM(si.product_name))
+          ELSE si.product_id
+        END
       ORDER BY quantity_sold DESC
       LIMIT ${limit}
     `
