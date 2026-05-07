@@ -19,34 +19,36 @@ export function Sidebar() {
   const lastScrollYRef = useRef(0)
   const scrollDeltaAccumulatorRef = useRef(0)
 
-  const navigation = [
-    {
-      name: "Dashboard",
-      href: "/dashboard",
-      icon: LayoutDashboard,
-      current: pathname === "/dashboard",
-    },
-    {
-      name: "Products",
-      href: "/products",
-      icon: Package,
-      current: pathname === "/products",
-    },
-    {
-      name: "Sales",
-      href: "/sales",
-      icon: ShoppingCart,
-      current: pathname === "/sales",
-    },
-    {
-      name: "Settings",
-      href: "/settings",
-      icon: Settings,
-      current: pathname === "/settings",
-    },
-  ]
-  if (!user) return null
-  const quickNavigation = useMemo(() => navigation.slice(0, 3), [navigation])
+  const navigation = useMemo(
+    () => [
+      {
+        name: "Dashboard",
+        href: "/dashboard",
+        icon: LayoutDashboard,
+        current: pathname === "/dashboard",
+      },
+      {
+        name: "Products",
+        href: "/products",
+        icon: Package,
+        current: pathname === "/products",
+      },
+      {
+        name: "Sales",
+        href: "/sales",
+        icon: ShoppingCart,
+        current: pathname === "/sales",
+      },
+      {
+        name: "Settings",
+        href: "/settings",
+        icon: Settings,
+        current: pathname === "/settings",
+      },
+    ],
+    [pathname],
+  )
+  const quickNavigation = navigation.slice(0, 3)
 
   useEffect(() => {
     const TOGGLE_THRESHOLD_PX = 28
@@ -89,6 +91,8 @@ export function Sidebar() {
     window.addEventListener("scroll", onScroll, { passive: true })
     return () => window.removeEventListener("scroll", onScroll)
   }, [mobileExpanded])
+
+  if (!user) return null
 
   const brandHeader = (
     <SidebarBrandHeader businessName={user.businessName} />
