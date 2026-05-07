@@ -3,7 +3,7 @@
 import type React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { LayoutDashboard, Package, ShoppingCart, Settings, ChevronRight, LogOut, PanelLeft } from "lucide-react"
 import { useDashboard } from "./dashboard-provider"
@@ -15,9 +15,6 @@ export function Sidebar() {
   const { user } = useDashboard()
   const pathname = usePathname()
   const [mobileExpanded, setMobileExpanded] = useState(false)
-  const [showMobileTopNav, setShowMobileTopNav] = useState(true)
-  const lastScrollYRef = useRef(0)
-  const scrollDeltaAccumulatorRef = useRef(0)
 
   const navigation = useMemo(
     () => [
@@ -50,48 +47,6 @@ export function Sidebar() {
   )
   const quickNavigation = navigation.slice(0, 3)
 
-  useEffect(() => {
-    const TOGGLE_THRESHOLD_PX = 28
-
-    const onScroll = () => {
-      const currentY = window.scrollY
-      if (mobileExpanded) {
-        setShowMobileTopNav(false)
-        lastScrollYRef.current = currentY
-        scrollDeltaAccumulatorRef.current = 0
-        return
-      }
-      if (currentY <= 8) {
-        setShowMobileTopNav(true)
-        lastScrollYRef.current = currentY
-        scrollDeltaAccumulatorRef.current = 0
-        return
-      }
-
-      const delta = currentY - lastScrollYRef.current
-      // Ignore tiny movement jitter and only toggle after clear intent.
-      if (Math.abs(delta) < 2) return
-
-      const sameDirection =
-        (scrollDeltaAccumulatorRef.current >= 0 && delta > 0) || (scrollDeltaAccumulatorRef.current <= 0 && delta < 0)
-      scrollDeltaAccumulatorRef.current = sameDirection ? scrollDeltaAccumulatorRef.current + delta : delta
-
-      if (scrollDeltaAccumulatorRef.current <= -TOGGLE_THRESHOLD_PX) {
-        setShowMobileTopNav(true)
-        scrollDeltaAccumulatorRef.current = 0
-      } else if (scrollDeltaAccumulatorRef.current >= TOGGLE_THRESHOLD_PX) {
-        setShowMobileTopNav(false)
-        scrollDeltaAccumulatorRef.current = 0
-      }
-
-      lastScrollYRef.current = currentY
-    }
-
-    onScroll()
-    window.addEventListener("scroll", onScroll, { passive: true })
-    return () => window.removeEventListener("scroll", onScroll)
-  }, [mobileExpanded])
-
   if (!user) return null
 
   const brandHeader = (
@@ -102,8 +57,8 @@ export function Sidebar() {
     <>
       <div
         className={cn(
-          "fixed left-16 right-0 z-30 border-b border-emerald-100 bg-white/95 px-2 py-2 backdrop-blur-sm transition-transform duration-200 ease-out lg:hidden",
-          mobileExpanded || !showMobileTopNav ? "-translate-y-full" : "translate-y-0",
+          "fixed left-16 right-0 z-30 border-b border-emerald-100 bg-white/95 px-2 py-2 backdrop-blur-sm lg:hidden",
+          mobileExpanded ? "hidden" : "block",
         )}
         style={{ top: "env(safe-area-inset-top)" }}
       >
