@@ -3,8 +3,9 @@
 import type React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { LayoutDashboard, Package, ShoppingCart, Settings, ChevronRight, Menu, LogOut } from "lucide-react"
+import { LayoutDashboard, Package, ShoppingCart, Settings, ChevronRight, Menu, LogOut, PanelLeft } from "lucide-react"
 import { useDashboard } from "./dashboard-provider"
 import { Sheet, SheetClose, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
@@ -13,6 +14,7 @@ import { LindaBizLogo } from "@/components/brand/lindabiz-logo"
 export function Sidebar() {
   const { user } = useDashboard()
   const pathname = usePathname()
+  const [mobileExpanded, setMobileExpanded] = useState(false)
 
   const navigation = [
     {
@@ -48,15 +50,48 @@ export function Sidebar() {
 
   return (
     <>
-      <Sheet>
-        <SheetTrigger asChild>
+      <div className="fixed inset-y-0 left-0 z-40 flex w-16 flex-col border-r border-emerald-100 bg-white lg:hidden">
+        <div className="flex h-16 items-center justify-center border-b border-emerald-100">
+          <LindaBizLogo compact />
+        </div>
+        <div className="flex-1 overflow-y-auto py-2">
+          <nav className="space-y-1 px-2">
+            {navigation.map((item) => (
+              <Link
+                key={`rail-${item.name}`}
+                href={item.href}
+                className={cn(
+                  "flex h-11 w-11 items-center justify-center rounded-lg transition-colors touch-manipulation",
+                  item.current
+                    ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                    : "text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800",
+                )}
+                aria-label={item.name}
+                title={item.name}
+              >
+                <item.icon className="h-5 w-5" />
+              </Link>
+            ))}
+          </nav>
+        </div>
+        <div className="border-t border-emerald-100 p-2 safe-pad-b">
           <Button
-            variant="ghost"
+            variant="outline"
             size="icon"
-            className="tap-target lg:hidden fixed left-[max(1rem,env(safe-area-inset-left))] top-[max(1rem,env(safe-area-inset-top))] z-50 rounded-xl bg-white/85 backdrop-blur-xl border border-white/50 shadow-md shadow-emerald-200/50 hover:bg-white/95"
+            className="h-11 w-11 border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+            onClick={() => setMobileExpanded(true)}
+            aria-label="Expand sidebar"
+            title="Expand sidebar"
           >
-            <Menu className="h-6 w-6 text-emerald-700" />
-            <span className="sr-only">Toggle menu</span>
+            <PanelLeft className="h-5 w-5" />
+          </Button>
+        </div>
+      </div>
+
+      <Sheet open={mobileExpanded} onOpenChange={setMobileExpanded}>
+        <SheetTrigger asChild>
+          <Button className="hidden" aria-hidden="true" tabIndex={-1}>
+            <Menu className="h-4 w-4" />
           </Button>
         </SheetTrigger>
         <SheetContent
