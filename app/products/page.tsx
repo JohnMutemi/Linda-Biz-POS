@@ -407,10 +407,10 @@ export default function ProductsPage() {
   return (
     <div className="min-h-screen relative">
       {/* Background */}
-      <div className="fixed inset-0 bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 -z-10"></div>
+      <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 -z-10"></div>
 
       {/* Subtle decorative elements */}
-      <div className="fixed inset-0 opacity-20 -z-10">
+      <div className="absolute inset-0 opacity-20 -z-10 pointer-events-none overflow-hidden">
         <div className="absolute top-20 right-20 w-64 h-64 bg-emerald-200 rounded-full mix-blend-multiply filter blur-xl animate-pulse"></div>
         <div
           className="absolute bottom-20 left-20 w-64 h-64 bg-green-200 rounded-full mix-blend-multiply filter blur-xl animate-pulse"
@@ -507,88 +507,12 @@ export default function ProductsPage() {
                   <Sparkles className="mr-2 h-4 w-4 shrink-0 text-emerald-600" />
                   All products
                 </p>
-                <p className="mt-0.5 text-xs leading-relaxed text-emerald-700 md:hidden">
-                  Card layout on your phone — tap Edit or Delete below each item.
-                </p>
-                <p className="mt-0.5 hidden text-xs text-emerald-700 md:block">
-                  Full table: scroll horizontally if columns don&apos;t fit.
+                <p className="mt-0.5 text-xs leading-relaxed text-emerald-700">
+                  Same rows and columns on desktop and phone. On smaller screens, swipe horizontally to see all columns.
                 </p>
               </div>
 
-              <div className="space-y-3 md:hidden">
-                {filteredProducts.map((product) => {
-                  const rl = reorderThreshold(product)
-                  const status = isOutOfStock(product) ? "out" : isLowStock(product) ? "low" : "ok"
-                  return (
-                    <Card key={product.id} className="border-emerald-100 bg-white/90 shadow-sm">
-                      <CardContent className="space-y-3 p-4">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <p className="font-semibold text-emerald-950">{product.name}</p>
-                            <p className="mt-1 text-sm text-emerald-700">{product.category}</p>
-                            <p className="mt-0.5 text-xs text-emerald-600">Unit: {product.unit}</p>
-                          </div>
-                          <Badge
-                            variant={status === "out" ? "destructive" : "outline"}
-                            className={
-                              status === "low"
-                                ? "shrink-0 bg-amber-100 text-amber-900 border-amber-300"
-                                : status === "ok"
-                                  ? "shrink-0 border-emerald-200 bg-emerald-50 text-emerald-800"
-                                  : "shrink-0"
-                            }
-                          >
-                            {status === "out" ? "Out" : status === "low" ? "Low" : "OK"}
-                          </Badge>
-                        </div>
-                        <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm text-emerald-900">
-                          <div>
-                            <dt className="text-emerald-600">Qty</dt>
-                            <dd className="font-medium tabular-nums">
-                              {product.quantity} {product.unit}
-                              {product.quantity === 1 ? "" : "s"}
-                            </dd>
-                          </div>
-                          <div>
-                            <dt className="text-emerald-600">Reorder</dt>
-                            <dd className="font-medium tabular-nums">{rl}</dd>
-                          </div>
-                          <div className="col-span-2">
-                            <dt className="text-emerald-600">Price</dt>
-                            <dd className="font-semibold tabular-nums">KSh {product.price.toLocaleString()}</dd>
-                          </div>
-                          <div className="col-span-2">
-                            <dt className="text-emerald-600">Notes</dt>
-                            <dd className="text-sm leading-snug text-emerald-800">
-                              {product.description?.trim() ? product.description : "—"}
-                            </dd>
-                          </div>
-                        </dl>
-                        <div className="flex gap-2 pt-1">
-                          <Button
-                            variant="outline"
-                            className="min-h-11 flex-1 touch-manipulation border-emerald-200 text-emerald-700 hover:bg-emerald-50"
-                            onClick={() => handleEdit(product)}
-                          >
-                            <Edit className="mr-2 h-4 w-4" />
-                            Edit
-                          </Button>
-                          <Button
-                            variant="outline"
-                            className="min-h-11 flex-1 touch-manipulation border-red-200 text-red-600 hover:bg-red-50"
-                            onClick={() => handleDelete(product.id)}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )
-                })}
-              </div>
-
-              <Card className="hidden overflow-hidden border-emerald-100 bg-white/85 shadow-sm backdrop-blur-sm md:block">
+              <Card className="overflow-hidden border-emerald-100 bg-white/85 shadow-sm backdrop-blur-sm">
                 <CardContent className="p-0">
                   <div className="overflow-x-auto">
                     <table className="w-full min-w-[980px] text-left text-sm">
@@ -653,7 +577,7 @@ export default function ProductsPage() {
                                     variant="outline"
                                     size="sm"
                                     onClick={() => handleEdit(product)}
-                                    className="border-emerald-200 hover:bg-emerald-50 text-emerald-700"
+                                    className="min-h-10 border-emerald-200 hover:bg-emerald-50 text-emerald-700"
                                   >
                                     <Edit className="h-4 w-4 mr-1" />
                                     Edit
@@ -662,7 +586,7 @@ export default function ProductsPage() {
                                     variant="outline"
                                     size="sm"
                                     onClick={() => handleDelete(product.id)}
-                                    className="border-red-200 hover:bg-red-50 text-red-600"
+                                    className="min-h-10 border-red-200 hover:bg-red-50 text-red-600"
                                   >
                                     <Trash2 className="h-4 w-4 mr-1" />
                                     Delete

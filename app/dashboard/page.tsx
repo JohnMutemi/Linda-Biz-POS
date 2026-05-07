@@ -27,7 +27,7 @@ import { cn } from "@/lib/utils"
 import { SalesHistory } from "@/components/sales-history"
 import { BusinessTip } from "@/components/business-tip"
 import { DashboardPageShell } from "@/components/dashboard/page-shell"
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts"
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts"
 import { isLowStock, reorderThreshold } from "@/lib/inventory-stock"
 import { useMediaQuery } from "@/hooks/use-media-query"
 
@@ -696,12 +696,6 @@ export default function Dashboard() {
                           ))}
                         </Pie>
                         <Tooltip />
-                        <Legend
-                          layout="horizontal"
-                          verticalAlign="bottom"
-                          align="center"
-                          wrapperStyle={{ fontSize: "11px", paddingTop: "8px", width: "100%" }}
-                        />
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
@@ -733,6 +727,17 @@ export default function Dashboard() {
                         </div>
                       )
                     })}
+                    <div className="mt-3 grid grid-cols-2 gap-2 rounded-xl border border-emerald-100 bg-white/60 p-3 text-xs text-emerald-700">
+                      {topSold.map((it, idx) => {
+                        const color = pieColors[idx % pieColors.length]
+                        return (
+                          <div key={`legend-${it.name}-${idx}`} className="flex items-center gap-2 min-w-0">
+                            <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
+                            <span className="truncate">{it.name}</span>
+                          </div>
+                        )
+                      })}
+                    </div>
                   </div>
                 </div>
               )}

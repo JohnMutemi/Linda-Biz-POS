@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { LayoutDashboard, Package, ShoppingCart, Settings, ChevronRight, Menu, LogOut } from "lucide-react"
 import { useDashboard } from "./dashboard-provider"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Sheet, SheetClose, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
 import { LindaBizLogo } from "@/components/brand/lindabiz-logo"
 
@@ -61,7 +61,7 @@ export function Sidebar() {
         </SheetTrigger>
         <SheetContent
           side="left"
-          className="w-[min(100vw-1rem,288px)] max-w-[calc(100vw-1rem)] p-0 bg-white/75 backdrop-blur-xl border-white/40 z-50 pt-[env(safe-area-inset-top)]"
+          className="w-[min(88vw,340px)] max-w-[min(88vw,340px)] p-0 bg-white border-r border-emerald-100 shadow-2xl z-50 pt-[env(safe-area-inset-top)]"
         >
           <MobileSidebar user={user} navigation={navigation} brandHeader={brandHeader} />
         </SheetContent>
@@ -107,30 +107,31 @@ function MobileSidebar({
   const { confirmLogout } = useDashboard()
 
   return (
-    <div className="flex flex-col h-full bg-white/70 backdrop-blur-xl">
+    <div className="flex h-full flex-col bg-white">
       {brandHeader}
 
       <div className="flex-1 px-4 py-4 overflow-y-auto">
         <nav className="space-y-1">
           {navigation.map((item) => (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={cn(
-                "flex min-h-12 items-center px-4 py-3 text-base font-medium rounded-lg group transition-colors relative z-10 touch-manipulation active:bg-emerald-100/80",
-                item.current
-                  ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
-                  : "text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800",
-              )}
-            >
-              <item.icon
+            <SheetClose key={item.name} asChild>
+              <Link
+                href={item.href}
                 className={cn(
-                  "mr-3 h-5 w-5 flex-shrink-0",
-                  item.current ? "text-emerald-700" : "text-emerald-600 group-hover:text-emerald-700",
+                  "flex min-h-12 items-center px-4 py-3 text-base font-medium rounded-lg group transition-colors relative z-10 touch-manipulation active:bg-emerald-100/80",
+                  item.current
+                    ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                    : "text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800",
                 )}
-              />
-              {item.name}
-            </Link>
+              >
+                <item.icon
+                  className={cn(
+                    "mr-3 h-5 w-5 flex-shrink-0",
+                    item.current ? "text-emerald-700" : "text-emerald-600 group-hover:text-emerald-700",
+                  )}
+                />
+                {item.name}
+              </Link>
+            </SheetClose>
           ))}
         </nav>
       </div>

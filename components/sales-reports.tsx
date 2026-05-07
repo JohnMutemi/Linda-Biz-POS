@@ -115,12 +115,22 @@ export function SalesReports({ userId, businessName }: SalesReportsProps) {
   }
 
   const generatePDFReport = async () => {
+    if (filterType === "custom" && (!startDate || !endDate)) {
+      toast({
+        title: "Select date range",
+        description: "Choose both start and end date before downloading a custom report.",
+        variant: "destructive",
+      })
+      return
+    }
     setIsGenerating(true)
 
     try {
+      const periodDescription = getPeriodText()
       const params = new URLSearchParams({
         userId,
         filterType,
+        periodLabel: periodDescription,
       })
       if (filterType === "custom") {
         if (startDate) params.set("startDate", startDate)
@@ -208,6 +218,9 @@ export function SalesReports({ userId, businessName }: SalesReportsProps) {
       <CardContent className="space-y-6">
         {/* Filter Controls */}
         <div className="space-y-4">
+          <div className="rounded-lg border border-emerald-100 bg-emerald-50/70 px-3 py-2 text-xs text-emerald-800 sm:text-sm">
+            Report period: <span className="font-semibold">{getPeriodText()}</span>
+          </div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="filter-type">Report Period</Label>

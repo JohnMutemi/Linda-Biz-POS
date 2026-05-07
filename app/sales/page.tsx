@@ -260,7 +260,7 @@ export default function SalesPage() {
         cart.length > 0 && "pb-[calc(5.25rem+env(safe-area-inset-bottom))] lg:pb-0",
       )}
     >
-      <div className="fixed inset-0 bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 -z-10"></div>
+      <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 -z-10"></div>
 
       <DashboardPageShell>
         {/* Header */}

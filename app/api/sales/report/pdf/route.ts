@@ -45,6 +45,7 @@ export async function GET(request: Request) {
     const filterType = (searchParams.get("filterType") || "today") as "today" | "week" | "month" | "custom"
     const startDateRaw = searchParams.get("startDate")
     const endDateRaw = searchParams.get("endDate")
+    const periodLabelRaw = searchParams.get("periodLabel")
 
     if (!userId || userId !== authenticatedUserId) {
       return NextResponse.json({ error: "userId is required" }, { status: 400 })
@@ -113,6 +114,27 @@ export async function GET(request: Request) {
     const totalTransactions = salesRows.length
     const totalItems = salesRows.reduce((sum, s) => sum + Number(s.item_count ?? 0), 0)
     const average = totalTransactions > 0 ? totalRevenue / totalTransactions : 0
+    const periodLabel =
+      periodLabelRaw?.trim() ||
+      (filterType === "custom" && startDateRaw && endDateRaw
+        ? `${startDateRaw} to ${endDateRaw}`
+        : filterType === "today"
+          ? `Today (${new Date().toLocaleDateString()})`
+          : filterType === "week"
+            ? "Last 7 Days"
+            : filterType === "month"
+              ? "Last 30 Days"
+              : "All Time")
+
+    const productTotals = new Map<string, number>()
+    for (const row of itemsRows) {
+      const name = String(row.product_name ?? "").trim() || "Unknown item"
+      const qty = Number(row.quantity ?? 0)
+      productTotals.set(name, (productTotals.get(name) ?? 0) + qty)
+    }
+    const topProducts = [...productTotals.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
 
     const pdfDoc = await PDFDocument.create()
     const page = pdfDoc.addPage()
@@ -133,6 +155,8 @@ export async function GET(request: Request) {
     }
     page.drawText(`Generated: ${new Date().toLocaleString()}`, { x: margin, y, size: 10, font, color: rgb(0.2, 0.2, 0.2) })
     y -= 16
+    page.drawText(`Period: ${periodLabel}`, { x: margin, y, size: 11, font: fontBold, color: rgb(0.06, 0.1, 0.17) })
+    y -= 16
     page.drawText(`Transactions: ${totalTransactions}`, { x: margin, y, size: 11, font })
     y -= 14
     page.drawText(`Items sold: ${totalItems}`, { x: margin, y, size: 11, font })
@@ -141,7 +165,35 @@ export async function GET(request: Request) {
     y -= 14
     page.drawText(`Average sale: KSh ${Math.round(average).toLocaleString()}`, { x: margin, y, size: 11, font })
 
-    y -= 22
+    y -= 20
+    page.drawText("Sales summary", { x: margin, y, size: 12, font: fontBold, color: rgb(0.06, 0.1, 0.17) })
+    y -= 14
+    const performanceNote =
+      totalTransactions === 0
+        ? "No transactions were recorded for this period."
+        : `This period recorded ${totalTransactions} transactions, ${totalItems} items sold, and KSh ${Math.round(
+            totalRevenue,
+          ).toLocaleString()} in revenue.`
+    page.drawText(performanceNote, { x: margin, y, size: 9.5, font, color: rgb(0.15, 0.15, 0.15) })
+    y -= 20
+
+    if (topProducts.length > 0) {
+      page.drawText("Top selling products", { x: margin, y, size: 12, font: fontBold, color: rgb(0.06, 0.1, 0.17) })
+      y -= 14
+      for (const [name, qty] of topProducts) {
+        if (y < margin + 20) break
+        page.drawText(`- ${name}: ${qty} unit${qty === 1 ? "" : "s"} sold`, {
+          x: margin,
+          y,
+          size: 9.5,
+          font,
+          color: rgb(0.15, 0.15, 0.15),
+        })
+        y -= 12
+      }
+      y -= 10
+    }
+
     page.drawText("Recent transactions", { x: margin, y, size: 12, font: fontBold, color: rgb(0.06, 0.1, 0.17) })
     y -= 16
 
