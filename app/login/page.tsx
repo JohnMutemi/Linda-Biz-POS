@@ -47,8 +47,8 @@ export default function LoginPage() {
         <div className="absolute bottom-[-100px] right-[-80px] h-[280px] w-[280px] rounded-full bg-emerald-300/40 blur-3xl" />
       </div>
 
-      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[1240px] items-center px-4 py-8 md:px-8 md:py-10">
-        <div className="grid w-full items-center gap-6 rounded-3xl border border-emerald-100 bg-white/90 p-4 shadow-2xl shadow-emerald-200/40 backdrop-blur-sm md:gap-8 md:p-8 lg:grid-cols-2">
+      <div className="safe-pad-x relative z-10 mx-auto flex min-h-[100dvh] w-full max-w-[1240px] items-center py-8 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(1.5rem,env(safe-area-inset-top))] md:px-8 md:py-10">
+        <div className="grid w-full items-center gap-6 rounded-2xl border border-emerald-100 bg-white/90 p-4 shadow-2xl shadow-emerald-200/40 backdrop-blur-sm sm:rounded-3xl md:gap-8 md:p-8 lg:grid-cols-2">
           <div>
             <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-700">
               Account Access

@@ -19,15 +19,15 @@ export default function SettingsPage() {
       <div className="fixed inset-0 bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 -z-10"></div>
 
       <DashboardPageShell>
-        <div className="dashboard-sticky-header flex items-start justify-between gap-4 mb-8">
-          <div className="flex-1">
-            <h1 className="text-3xl font-bold tracking-tight text-emerald-900">Settings</h1>
-            <p className="text-emerald-700 mt-1">Manage your application preferences</p>
+        <div className="dashboard-sticky-header mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-2xl font-bold tracking-tight text-emerald-900 sm:text-3xl">Settings</h1>
+            <p className="mt-1 text-sm text-emerald-700 sm:text-base">Manage your application preferences</p>
           </div>
-          <BackToDashboardButton className="shrink-0" />
+          <BackToDashboardButton className="w-full shrink-0 sm:w-auto" />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6">
           <Card className="bg-white/70 backdrop-blur-sm border-emerald-100">
             <CardHeader>
               <CardTitle className="flex items-center text-emerald-900">
@@ -38,15 +38,15 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span>Low stock alerts</span>
-                  <Button variant="outline" size="sm" className="border-emerald-200 hover:bg-emerald-50">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <span className="text-sm sm:text-base">Low stock alerts</span>
+                  <Button variant="outline" size="sm" className="min-h-10 touch-manipulation border-emerald-200 hover:bg-emerald-50">
                     Enabled
                   </Button>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span>Sales notifications</span>
-                  <Button variant="outline" size="sm" className="border-emerald-200 hover:bg-emerald-50">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <span className="text-sm sm:text-base">Sales notifications</span>
+                  <Button variant="outline" size="sm" className="min-h-10 touch-manipulation border-emerald-200 hover:bg-emerald-50">
                     Enabled
                   </Button>
                 </div>

@@ -12,7 +12,14 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "LindaBiz POS",
   description: "Simplified Point of Sale for Small Scale Vendors",
-    generator: 'v0.app'
+  generator: "v0.app",
+}
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: "cover" as const,
 }
 
 export default function RootLayout({

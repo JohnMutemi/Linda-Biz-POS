@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -253,32 +254,38 @@ export default function SalesPage() {
   }
 
   return (
-    <div className="min-h-screen relative">
+    <div
+      className={cn(
+        "min-h-screen relative",
+        cart.length > 0 && "pb-[calc(5.25rem+env(safe-area-inset-bottom))] lg:pb-0",
+      )}
+    >
       <div className="fixed inset-0 bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 -z-10"></div>
 
       <DashboardPageShell>
         {/* Header */}
-        <div className="dashboard-sticky-header flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-emerald-900">Sales</h1>
-            <p className="text-emerald-700">Process new sales and manage transactions</p>
+        <div className="dashboard-sticky-header mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0">
+            <h1 className="text-xl font-bold text-emerald-900 sm:text-2xl">Sales</h1>
+            <p className="mt-1 text-sm leading-snug text-emerald-700 sm:text-base">
+              Process new sales and manage transactions
+            </p>
           </div>
-          <div className="flex items-center space-x-4">
-            <BackToDashboardButton label="Dashboard" />
-            <Badge variant="outline" className="text-lg px-3 py-1 border-emerald-200 bg-white/70">
-              Cart: {cart.length} items
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+            <BackToDashboardButton label="Dashboard" className="w-full sm:w-auto" />
+            <Badge variant="outline" className="w-fit border-emerald-200 bg-white/70 px-3 py-1.5 text-sm sm:text-base">
+              Cart: {cart.length} items · {getTotalItems()} units
             </Badge>
-            {/* Header Checkout Button */}
             {cart.length > 0 && (
               <Button
                 onClick={handleDirectCheckout}
                 disabled={isProcessing}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
+                className="hidden min-h-11 touch-manipulation bg-emerald-600 hover:bg-emerald-700 lg:inline-flex"
                 size="lg"
               >
                 {isProcessing ? (
                   <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-white"></div>
                     Processing...
                   </>
                 ) : (
@@ -292,7 +299,7 @@ export default function SalesPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:gap-6">
           {/* Products Section */}
           <div className="lg:col-span-2 space-y-4">
             <Card className="bg-white/70 backdrop-blur-sm border-emerald-100">
@@ -306,7 +313,7 @@ export default function SalesPage() {
                     placeholder="Search products..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="border-emerald-200 focus:border-emerald-400"
+                    className="h-12 min-h-11 border-emerald-200 text-base focus:border-emerald-400"
                   />
                 </div>
 
@@ -332,17 +339,25 @@ export default function SalesPage() {
                     {filteredProducts.map((product) => (
                       <div
                         key={product.id}
-                        className="flex items-center justify-between p-4 border border-emerald-100 rounded-lg hover:bg-emerald-50/50 bg-white/50 cursor-pointer"
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault()
+                            addToCart(product)
+                          }
+                        }}
+                        className="flex min-h-[4.25rem] cursor-pointer items-center justify-between gap-3 rounded-xl border border-emerald-100 bg-white/50 p-3 touch-manipulation active:bg-emerald-50 sm:p-4"
                         onClick={() => addToCart(product)}
                       >
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
                             <h3 className="font-medium text-emerald-900">{product.name}</h3>
-                            <Badge variant="outline" className="border-emerald-200">
+                            <Badge variant="outline" className="border-emerald-200 text-xs">
                               {product.category}
                             </Badge>
                           </div>
-                          <p className="text-sm text-emerald-700">
+                          <p className="mt-1 text-sm text-emerald-700">
                             KSh {product.price} per {product.unit} • {product.quantity} available
                           </p>
                         </div>
@@ -351,10 +366,9 @@ export default function SalesPage() {
                             e.stopPropagation()
                             addToCart(product)
                           }}
-                          size="sm"
-                          className="bg-emerald-600 hover:bg-emerald-700"
+                          className="min-h-11 shrink-0 touch-manipulation bg-emerald-600 px-4 hover:bg-emerald-700"
                         >
-                          <Plus className="h-4 w-4 mr-1" />
+                          <Plus className="mr-1 h-4 w-4" />
                           Add
                         </Button>
                       </div>
@@ -392,9 +406,10 @@ export default function SalesPage() {
                             variant="ghost"
                             size="sm"
                             onClick={() => removeFromCart(item.id)}
-                            className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                            className="tap-target text-red-500 hover:bg-red-50 hover:text-red-700"
+                            aria-label={`Remove ${item.name}`}
                           >
-                            <Trash2 className="h-3 w-3" />
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
                         <div className="flex items-center justify-between">
@@ -403,11 +418,12 @@ export default function SalesPage() {
                               variant="outline"
                               size="sm"
                               onClick={() => updateCartQuantity(item.id, item.cartQuantity - 1)}
-                              className="border-emerald-200 w-8 h-8 p-0"
+                              className="tap-target border-emerald-200 p-0"
+                              aria-label="Decrease quantity"
                             >
-                              <Minus className="h-3 w-3" />
+                              <Minus className="h-4 w-4" />
                             </Button>
-                            <span className="text-sm font-medium w-8 text-center text-emerald-900">
+                            <span className="min-w-[2rem] text-center text-base font-semibold tabular-nums text-emerald-900">
                               {item.cartQuantity}
                             </span>
                             <Button
@@ -415,9 +431,10 @@ export default function SalesPage() {
                               size="sm"
                               onClick={() => updateCartQuantity(item.id, item.cartQuantity + 1)}
                               disabled={item.cartQuantity >= item.quantity}
-                              className="border-emerald-200 w-8 h-8 p-0"
+                              className="tap-target border-emerald-200 p-0"
+                              aria-label="Increase quantity"
                             >
-                              <Plus className="h-3 w-3" />
+                              <Plus className="h-4 w-4" />
                             </Button>
                           </div>
                           <div className="text-right">
@@ -447,7 +464,7 @@ export default function SalesPage() {
                       <Button
                         onClick={handleDirectCheckout}
                         disabled={isProcessing}
-                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 text-base"
+                        className="hidden min-h-12 w-full touch-manipulation bg-emerald-600 py-3 text-base font-semibold text-white hover:bg-emerald-700 lg:flex"
                         size="lg"
                       >
                         {isProcessing ? (
@@ -509,6 +526,36 @@ export default function SalesPage() {
           <SalesReports userId={user.id} businessName={user.businessName} />
         </div>
       </DashboardPageShell>
+
+      {cart.length > 0 && (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-emerald-200/90 bg-white/95 px-3 py-3 shadow-[0_-12px_40px_-16px_rgba(16,24,40,0.2)] backdrop-blur-lg safe-pad-b lg:hidden">
+          <div className="mx-auto flex max-w-lg items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-emerald-700">{getTotalItems()} units · {cart.length} line items</p>
+              <p className="truncate text-lg font-bold tabular-nums text-emerald-950">
+                KSh {getCartTotal().toLocaleString()}
+              </p>
+            </div>
+            <Button
+              onClick={handleDirectCheckout}
+              disabled={isProcessing}
+              className="min-h-12 shrink-0 touch-manipulation bg-emerald-600 px-5 text-sm font-semibold text-white hover:bg-emerald-700 sm:px-6 sm:text-base"
+            >
+              {isProcessing ? (
+                <span className="flex items-center gap-2">
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  Wait
+                </span>
+              ) : (
+                <span className="flex items-center gap-2">
+                  <Receipt className="h-5 w-5 shrink-0" />
+                  Complete sale
+                </span>
+              )}
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -208,11 +208,11 @@ export function SalesReports({ userId, businessName }: SalesReportsProps) {
       <CardContent className="space-y-6">
         {/* Filter Controls */}
         <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="filter-type">Report Period</Label>
               <Select value={filterType} onValueChange={(value: any) => setFilterType(value)}>
-                <SelectTrigger className="border-emerald-200 focus:border-emerald-400">
+                <SelectTrigger className="min-h-11 h-12 touch-manipulation border-emerald-200 text-base focus:border-emerald-400">
                   <SelectValue placeholder="Select period" />
                 </SelectTrigger>
                 <SelectContent>
@@ -233,7 +233,7 @@ export function SalesReports({ userId, businessName }: SalesReportsProps) {
                     type="date"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
-                    className="border-emerald-200 focus:border-emerald-400"
+                    className="min-h-11 border-emerald-200 text-base focus:border-emerald-400"
                   />
                 </div>
                 <div className="space-y-2">
@@ -243,7 +243,7 @@ export function SalesReports({ userId, businessName }: SalesReportsProps) {
                     type="date"
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
-                    className="border-emerald-200 focus:border-emerald-400"
+                    className="min-h-11 border-emerald-200 text-base focus:border-emerald-400"
                   />
                 </div>
               </>
@@ -252,37 +252,39 @@ export function SalesReports({ userId, businessName }: SalesReportsProps) {
         </div>
 
         {/* Metrics Summary */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-200">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 sm:p-4">
             <div className="flex items-center space-x-2">
               <DollarSign className="h-4 w-4 text-emerald-600" />
               <span className="text-sm font-medium text-emerald-700">Revenue</span>
             </div>
-            <p className="text-lg font-bold text-emerald-900">KSh {metrics.totalRevenue.toLocaleString()}</p>
+            <p className="text-base font-bold tabular-nums text-emerald-900 sm:text-lg">
+              KSh {metrics.totalRevenue.toLocaleString()}
+            </p>
           </div>
 
-          <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+          <div className="rounded-lg border border-green-200 bg-green-50 p-3 sm:p-4">
             <div className="flex items-center space-x-2">
               <TrendingUp className="h-4 w-4 text-green-600" />
               <span className="text-sm font-medium text-green-700">Transactions</span>
             </div>
-            <p className="text-lg font-bold text-green-900">{metrics.totalTransactions}</p>
+            <p className="text-base font-bold tabular-nums text-green-900 sm:text-lg">{metrics.totalTransactions}</p>
           </div>
 
-          <div className="p-4 bg-teal-50 rounded-lg border border-teal-200">
+          <div className="rounded-lg border border-teal-200 bg-teal-50 p-3 sm:p-4">
             <div className="flex items-center space-x-2">
               <Package className="h-4 w-4 text-teal-600" />
               <span className="text-sm font-medium text-teal-700">Items Sold</span>
             </div>
-            <p className="text-lg font-bold text-teal-900">{metrics.totalItems}</p>
+            <p className="text-base font-bold tabular-nums text-teal-900 sm:text-lg">{metrics.totalItems}</p>
           </div>
 
-          <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 sm:p-4">
             <div className="flex items-center space-x-2">
               <Calendar className="h-4 w-4 text-blue-600" />
               <span className="text-sm font-medium text-blue-700">Average Sale</span>
             </div>
-            <p className="text-lg font-bold text-blue-900">
+            <p className="text-base font-bold tabular-nums text-blue-900 sm:text-lg">
               KSh {Math.round(metrics.averageTransaction).toLocaleString()}
             </p>
           </div>
@@ -332,7 +334,7 @@ export function SalesReports({ userId, businessName }: SalesReportsProps) {
           <Button
             onClick={generatePDFReport}
             disabled={isGenerating || filteredSales.length === 0}
-            className="bg-emerald-600 hover:bg-emerald-700"
+            className="min-h-12 w-full max-w-md touch-manipulation bg-emerald-600 hover:bg-emerald-700 sm:w-auto"
           >
             {isGenerating ? (
               <>

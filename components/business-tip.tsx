@@ -99,7 +99,7 @@ export function BusinessTip() {
           setIsVisible(true)
           if (!tip) generateTip()
         }}
-        className="fixed bottom-4 right-4 z-40 border-emerald-200 hover:bg-emerald-50 bg-white/90 backdrop-blur-sm sm:right-6"
+        className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-[max(1rem,env(safe-area-inset-right))] z-40 border-emerald-200 hover:bg-emerald-50 bg-white/90 backdrop-blur-sm sm:right-6 tap-target rounded-xl"
       >
         <Lightbulb className="h-4 w-4 mr-2 text-emerald-600" />
         Business Tip
@@ -108,7 +108,7 @@ export function BusinessTip() {
   }
 
   return (
-    <Card className="fixed bottom-4 right-3 z-40 w-[min(92vw,22rem)] bg-white/95 backdrop-blur-sm border-emerald-200 shadow-lg sm:right-6">
+    <Card className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-[max(0.75rem,env(safe-area-inset-right))] z-40 w-[min(92vw,22rem)] bg-white/95 backdrop-blur-sm border-emerald-200 shadow-lg sm:right-6">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-emerald-900 flex items-center text-sm">

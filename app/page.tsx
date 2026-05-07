@@ -47,7 +47,7 @@ export default function Home() {
         <div className="absolute bottom-[-100px] right-[-80px] h-[280px] w-[280px] rounded-full bg-emerald-300/40 blur-3xl" />
       </div>
 
-      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[1240px] flex-col px-4 pb-10 pt-6 md:px-8">
+      <div className="safe-pad-x relative z-10 mx-auto flex min-h-[100dvh] w-full max-w-[1240px] flex-col pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))] md:px-8 md:pb-10 md:pt-6">
         <MarketingHeader />
 
         <section className="mt-8 grid flex-1 items-center gap-8 lg:grid-cols-2">

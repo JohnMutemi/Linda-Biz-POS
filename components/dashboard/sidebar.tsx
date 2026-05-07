@@ -53,13 +53,16 @@ export function Sidebar() {
           <Button
             variant="ghost"
             size="icon"
-            className="lg:hidden fixed left-4 top-4 z-50 bg-white/70 backdrop-blur-xl border border-white/50 shadow-sm shadow-emerald-200/60 hover:bg-white/80"
+            className="tap-target lg:hidden fixed left-[max(1rem,env(safe-area-inset-left))] top-[max(1rem,env(safe-area-inset-top))] z-50 rounded-xl bg-white/85 backdrop-blur-xl border border-white/50 shadow-md shadow-emerald-200/50 hover:bg-white/95"
           >
-            <Menu className="h-5 w-5 text-emerald-700" />
+            <Menu className="h-6 w-6 text-emerald-700" />
             <span className="sr-only">Toggle menu</span>
           </Button>
         </SheetTrigger>
-        <SheetContent side="left" className="w-[280px] p-0 bg-white/75 backdrop-blur-xl border-white/40 z-50">
+        <SheetContent
+          side="left"
+          className="w-[min(100vw-1rem,288px)] max-w-[calc(100vw-1rem)] p-0 bg-white/75 backdrop-blur-xl border-white/40 z-50 pt-[env(safe-area-inset-top)]"
+        >
           <MobileSidebar user={user} navigation={navigation} brandHeader={brandHeader} />
         </SheetContent>
       </Sheet>
@@ -114,7 +117,7 @@ function MobileSidebar({
               key={item.name}
               href={item.href}
               className={cn(
-                "flex items-center px-4 py-3 text-sm font-medium rounded-md group transition-colors relative z-10",
+                "flex min-h-12 items-center px-4 py-3 text-base font-medium rounded-lg group transition-colors relative z-10 touch-manipulation active:bg-emerald-100/80",
                 item.current
                   ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
                   : "text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800",
@@ -132,23 +135,23 @@ function MobileSidebar({
         </nav>
       </div>
 
-      <div className="border-t border-emerald-200 p-4">
+      <div className="border-t border-emerald-200 p-4 safe-pad-b">
         <div className="flex items-center mb-4">
-          <Link href="/profile" className="flex items-center flex-1 relative z-10">
+          <Link href="/profile" className="flex items-center flex-1 relative z-10 min-h-11">
             <div className="flex-shrink-0">
               <div className="h-10 w-10 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center font-semibold">
                 {user.name.charAt(0).toUpperCase()}
               </div>
             </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-emerald-900">{user.name}</p>
-              <p className="text-xs text-emerald-600">{user.email}</p>
+            <div className="ml-3 min-w-0">
+              <p className="text-sm font-medium text-emerald-900 truncate">{user.name}</p>
+              <p className="text-xs text-emerald-600 truncate">{user.email}</p>
             </div>
           </Link>
         </div>
         <Button
           variant="outline"
-          className="w-full justify-start border-rose-200 bg-rose-50/50 text-rose-700 hover:bg-rose-50 hover:text-rose-800 hover:border-rose-300 relative z-10"
+          className="min-h-11 w-full touch-manipulation justify-start border-rose-200 bg-rose-50/50 text-rose-700 hover:bg-rose-50 hover:text-rose-800 hover:border-rose-300 relative z-10"
           onClick={confirmLogout}
         >
           <LogOut className="mr-2 h-4 w-4" />
@@ -181,7 +184,7 @@ function DesktopSidebar({
               key={item.name}
               href={item.href}
               className={cn(
-                "flex items-center px-4 py-3 text-sm font-medium rounded-md group transition-colors relative z-10 cursor-pointer",
+                "flex min-h-12 items-center px-4 py-3 text-base font-medium rounded-lg group transition-colors relative z-10 cursor-pointer touch-manipulation active:bg-emerald-100/80",
                 item.current
                   ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
                   : "text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800",

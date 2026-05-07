@@ -132,7 +132,7 @@ export function SalesHistory({ userId, limit = 5 }: SalesHistoryProps) {
                 <span className="text-xs text-emerald-600">ID: {sale.id.split("_")[1]}</span>
               </div>
               {getItemsSummary(sale) && (
-                <div className="mt-2 text-xs text-emerald-700">
+                <div className="mt-2 break-words text-xs leading-relaxed text-emerald-700">
                   <span className="font-medium">Items:</span> {getItemsSummary(sale)}
                 </div>
               )}

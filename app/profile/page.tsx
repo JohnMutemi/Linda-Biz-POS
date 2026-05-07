@@ -148,17 +148,17 @@ export default function ProfilePage() {
       <div className="fixed inset-0 bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 -z-10"></div>
 
       <DashboardPageShell>
-        <div className="dashboard-sticky-header flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-emerald-900">Profile</h1>
-            <p className="text-emerald-700 mt-1">Manage your account information</p>
+        <div className="dashboard-sticky-header mb-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold tracking-tight text-emerald-900 sm:text-3xl">Profile</h1>
+            <p className="mt-1 text-sm text-emerald-700 sm:text-base">Manage your account information</p>
           </div>
-          <div className="flex space-x-3">
-            <BackToDashboardButton />
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+            <BackToDashboardButton className="w-full sm:w-auto" />
 
             <Dialog open={isLogoutDialogOpen} onOpenChange={setIsLogoutDialogOpen}>
               <DialogTrigger asChild>
-                <Button variant="destructive">
+                <Button variant="destructive" className="min-h-11 w-full touch-manipulation sm:w-auto">
                   <LogOut className="mr-2 h-4 w-4" />
                   Logout
                 </Button>

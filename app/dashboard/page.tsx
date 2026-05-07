@@ -29,6 +29,7 @@ import { BusinessTip } from "@/components/business-tip"
 import { DashboardPageShell } from "@/components/dashboard/page-shell"
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts"
 import { isLowStock, reorderThreshold } from "@/lib/inventory-stock"
+import { useMediaQuery } from "@/hooks/use-media-query"
 
 interface Product {
   id: string
@@ -79,6 +80,7 @@ export default function Dashboard() {
   const [dataLoading, setDataLoading] = useState(true)
   const [topSold, setTopSold] = useState<{ name: string; quantitySold: number }[]>([])
   const router = useRouter()
+  const isNarrowChart = useMediaQuery("(max-width: 639px)")
 
   useEffect(() => {
     if (!user) return
@@ -230,17 +232,17 @@ export default function Dashboard() {
         onValueChange={(v) => setDashboardTab(v as "overview" | "analytics")}
         className="space-y-6"
       >
-        <TabsList className="grid h-auto w-full max-w-md grid-cols-2 rounded-lg border border-emerald-100 bg-white/60 p-1 sm:inline-flex sm:w-auto sm:grid-cols-none">
+        <TabsList className="grid h-auto w-full grid-cols-2 rounded-xl border border-emerald-100 bg-white/60 p-1 sm:inline-flex sm:max-w-md sm:w-auto">
           <TabsTrigger
             value="overview"
-            className="gap-2 rounded-md text-emerald-800 hover:bg-emerald-50/80 data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-sm"
+            className="gap-2 rounded-lg py-3 text-sm font-medium text-emerald-800 touch-manipulation hover:bg-emerald-50/80 data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-sm sm:py-2"
           >
             <LayoutDashboard className="h-4 w-4 shrink-0" />
             Overview
           </TabsTrigger>
           <TabsTrigger
             value="analytics"
-            className="gap-2 rounded-md text-emerald-800 hover:bg-emerald-50/80 data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-sm"
+            className="gap-2 rounded-lg py-3 text-sm font-medium text-emerald-800 touch-manipulation hover:bg-emerald-50/80 data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-sm sm:py-2"
           >
             <BarChart3 className="h-4 w-4 shrink-0" />
             Analytics
@@ -249,7 +251,7 @@ export default function Dashboard() {
 
         <TabsContent value="overview" className="mt-0 space-y-8 ring-offset-0">
         {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2 md:gap-6 lg:grid-cols-4">
           <StatsCard
             title="Total Stock Value"
             value={`KSh ${totalStockValue.toLocaleString()}`}
@@ -365,9 +367,9 @@ export default function Dashboard() {
               <CardDescription className="text-emerald-700">Common tasks for your business</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 md:gap-4">
                 <Button
-                  className="relative z-10 h-24 space-y-2 bg-emerald-600 hover:bg-emerald-700"
+                  className="relative z-10 flex min-h-[5.5rem] flex-col gap-2 py-4 touch-manipulation bg-emerald-600 hover:bg-emerald-700 md:h-24"
                   onClick={() => router.push("/products")}
                 >
                   <Plus className="h-6 w-6" />
@@ -375,7 +377,7 @@ export default function Dashboard() {
                 </Button>
                 <Button
                   variant="outline"
-                  className="h-24 flex flex-col items-center justify-center space-y-2 border-emerald-200 hover:bg-emerald-50 relative z-10"
+                  className="flex min-h-[5.5rem] flex-col items-center justify-center gap-2 border-emerald-200 py-4 touch-manipulation hover:bg-emerald-50 relative z-10 md:h-24"
                   onClick={() => router.push("/sales")}
                 >
                   <ShoppingCart className="h-6 w-6" />
@@ -383,7 +385,7 @@ export default function Dashboard() {
                 </Button>
                 <Button
                   variant="outline"
-                  className="h-24 flex flex-col items-center justify-center space-y-2 border-emerald-200 hover:bg-emerald-50 relative z-10"
+                  className="flex min-h-[5.5rem] flex-col items-center justify-center gap-2 border-emerald-200 py-4 touch-manipulation hover:bg-emerald-50 relative z-10 sm:col-span-2 md:col-span-1 md:h-24"
                   onClick={() => router.push("/products")}
                 >
                   <Package className="h-6 w-6" />
@@ -459,8 +461,8 @@ export default function Dashboard() {
         {/* Product Overview */}
         <div className="mt-6">
           <Card className="bg-white/70 backdrop-blur-sm border-emerald-100">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
+            <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
                 <CardTitle className="text-emerald-900">Product Overview</CardTitle>
                 <CardDescription className="text-emerald-700">
                   {products.length > 0
@@ -472,7 +474,7 @@ export default function Dashboard() {
                 variant="outline"
                 size="sm"
                 onClick={() => router.push("/products")}
-                className="border-emerald-200 hover:bg-emerald-50 relative z-10"
+                className="min-h-10 shrink-0 touch-manipulation border-emerald-200 hover:bg-emerald-50 relative z-10 sm:self-start"
               >
                 View All
                 <ArrowRight className="ml-2 h-4 w-4" />
@@ -519,47 +521,92 @@ export default function Dashboard() {
                   Great work. No low stock products at the moment.
                 </div>
               ) : (
-                <div className="overflow-x-auto rounded-xl border border-emerald-100">
-                  <table className="w-full min-w-[640px] text-sm">
-                    <thead className="bg-emerald-50 text-emerald-900">
-                      <tr>
-                        <th className="px-4 py-3 text-left font-semibold">Product</th>
-                        <th className="px-4 py-3 text-left font-semibold">Category</th>
-                        <th className="px-4 py-3 text-left font-semibold">Available</th>
-                        <th className="px-4 py-3 text-left font-semibold whitespace-nowrap">Reorder level</th>
-                        <th className="px-4 py-3 text-left font-semibold">Unit Price</th>
-                        <th className="px-4 py-3 text-left font-semibold">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {stockAlerts.map((item, index) => {
-                        const out = item.quantity === 0
-                        const rl = reorderThreshold(item)
-                        const atReorder = !out && item.quantity === rl
-                        return (
-                          <tr key={item.id} className={cn(index % 2 === 0 ? "bg-white" : "bg-emerald-50/30")}>
-                            <td className="px-4 py-3 font-medium text-emerald-900">{item.name}</td>
-                            <td className="px-4 py-3 text-emerald-700">{item.category}</td>
-                            <td className="px-4 py-3 text-emerald-700 tabular-nums">
-                              {item.quantity} {item.unit}
-                              {item.quantity === 1 ? "" : "s"}
-                            </td>
-                            <td className="px-4 py-3 text-emerald-700 tabular-nums">{rl}</td>
-                            <td className="px-4 py-3 text-emerald-700">KSh {item.price.toLocaleString()}</td>
-                            <td className="px-4 py-3">
-                              <Badge
-                                variant={out ? "destructive" : "outline"}
-                                className={out ? "" : "text-amber-700 border-amber-300 bg-amber-50"}
-                              >
-                                {out ? "Out of Stock" : atReorder ? "At reorder level" : "Below reorder level"}
-                              </Badge>
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                <>
+                  <div className="space-y-3 md:hidden">
+                    {stockAlerts.map((item) => {
+                      const out = item.quantity === 0
+                      const rl = reorderThreshold(item)
+                      const atReorder = !out && item.quantity === rl
+                      return (
+                        <div
+                          key={item.id}
+                          className="rounded-xl border border-emerald-100 bg-white/90 p-4 shadow-sm touch-manipulation"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="font-semibold text-emerald-950">{item.name}</p>
+                              <p className="mt-1 text-sm text-emerald-700">{item.category}</p>
+                            </div>
+                            <Badge
+                              variant={out ? "destructive" : "outline"}
+                              className={cn("shrink-0 text-xs", !out && "text-amber-800 border-amber-300 bg-amber-50")}
+                            >
+                              {out ? "Out" : atReorder ? "At reorder" : "Low"}
+                            </Badge>
+                          </div>
+                          <dl className="mt-3 grid grid-cols-2 gap-2 text-sm text-emerald-800">
+                            <div>
+                              <dt className="text-emerald-600">Available</dt>
+                              <dd className="font-medium tabular-nums">
+                                {item.quantity} {item.unit}
+                                {item.quantity === 1 ? "" : "s"}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="text-emerald-600">Reorder</dt>
+                              <dd className="font-medium tabular-nums">{rl}</dd>
+                            </div>
+                            <div className="col-span-2">
+                              <dt className="text-emerald-600">Unit price</dt>
+                              <dd className="font-medium tabular-nums">KSh {item.price.toLocaleString()}</dd>
+                            </div>
+                          </dl>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <div className="hidden md:block overflow-x-auto rounded-xl border border-emerald-100">
+                    <table className="w-full min-w-[640px] text-sm">
+                      <thead className="bg-emerald-50 text-emerald-900">
+                        <tr>
+                          <th className="px-4 py-3 text-left font-semibold">Product</th>
+                          <th className="px-4 py-3 text-left font-semibold">Category</th>
+                          <th className="px-4 py-3 text-left font-semibold">Available</th>
+                          <th className="px-4 py-3 text-left font-semibold whitespace-nowrap">Reorder level</th>
+                          <th className="px-4 py-3 text-left font-semibold">Unit Price</th>
+                          <th className="px-4 py-3 text-left font-semibold">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {stockAlerts.map((item, index) => {
+                          const out = item.quantity === 0
+                          const rl = reorderThreshold(item)
+                          const atReorder = !out && item.quantity === rl
+                          return (
+                            <tr key={item.id} className={cn(index % 2 === 0 ? "bg-white" : "bg-emerald-50/30")}>
+                              <td className="px-4 py-3 font-medium text-emerald-900">{item.name}</td>
+                              <td className="px-4 py-3 text-emerald-700">{item.category}</td>
+                              <td className="px-4 py-3 text-emerald-700 tabular-nums">
+                                {item.quantity} {item.unit}
+                                {item.quantity === 1 ? "" : "s"}
+                              </td>
+                              <td className="px-4 py-3 text-emerald-700 tabular-nums">{rl}</td>
+                              <td className="px-4 py-3 text-emerald-700">KSh {item.price.toLocaleString()}</td>
+                              <td className="px-4 py-3">
+                                <Badge
+                                  variant={out ? "destructive" : "outline"}
+                                  className={out ? "" : "text-amber-700 border-amber-300 bg-amber-50"}
+                                >
+                                  {out ? "Out of Stock" : atReorder ? "At reorder level" : "Below reorder level"}
+                                </Badge>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>
@@ -571,7 +618,7 @@ export default function Dashboard() {
         </div>
 
         {categoryOverview.length > 0 && (
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 md:gap-6">
             {categoryOverview.map(({ title, count }) => (
               <CategoryCard
                 key={title}
@@ -633,15 +680,15 @@ export default function Dashboard() {
                 </div>
               ) : (
                 <div className="grid gap-6 lg:grid-cols-2">
-                  <div className="h-72 w-full min-h-[200px]">
+                  <div className="h-64 w-full min-h-[220px] sm:h-72">
                     <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
+                      <PieChart margin={{ top: 4, right: 4, bottom: 4, left: 4 }}>
                         <Pie
                           data={topSold}
                           dataKey="quantitySold"
                           nameKey="name"
-                          outerRadius={100}
-                          innerRadius={55}
+                          outerRadius={isNarrowChart ? 76 : 100}
+                          innerRadius={isNarrowChart ? 40 : 55}
                           paddingAngle={3}
                         >
                           {topSold.map((_, idx) => (
@@ -649,7 +696,12 @@ export default function Dashboard() {
                           ))}
                         </Pie>
                         <Tooltip />
-                        <Legend />
+                        <Legend
+                          layout="horizontal"
+                          verticalAlign="bottom"
+                          align="center"
+                          wrapperStyle={{ fontSize: "11px", paddingTop: "8px", width: "100%" }}
+                        />
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
@@ -658,8 +710,8 @@ export default function Dashboard() {
                       const color = pieColors[idx % pieColors.length]
                       return (
                         <div
-                          key={it.name}
-                          className="flex items-center justify-between rounded-xl border border-emerald-100 px-3 py-3 shadow-sm backdrop-blur-sm"
+                          key={`${idx}-${it.name}`}
+                          className="flex items-center justify-between gap-2 rounded-xl border border-emerald-100 px-3 py-3 shadow-sm backdrop-blur-sm touch-manipulation"
                           style={{
                             background: `linear-gradient(90deg, ${color}22 0%, transparent 65%)`,
                             borderLeftWidth: 4,
@@ -713,13 +765,13 @@ function StatsCard({
 
   return (
     <Card className="border-emerald-100 bg-white/70 backdrop-blur-sm">
-      <CardContent className="p-6">
-        <div className="flex items-center space-x-4">
-          <div className={cn("p-2 rounded-full", colorMap[accentColor])}>{icon}</div>
-          <div>
-            <p className="text-sm font-medium text-emerald-600">{title}</p>
-            <h3 className="text-2xl font-bold mt-1 text-emerald-900">{value}</h3>
-            <p className="text-xs text-emerald-600 mt-1">{description}</p>
+      <CardContent className="p-4 sm:p-6">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className={cn("shrink-0 rounded-full p-2.5 sm:p-2", colorMap[accentColor])}>{icon}</div>
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-emerald-600 sm:text-sm">{title}</p>
+            <h3 className="mt-0.5 text-xl font-bold tabular-nums text-emerald-900 sm:mt-1 sm:text-2xl">{value}</h3>
+            <p className="mt-0.5 text-[11px] leading-snug text-emerald-600 sm:mt-1 sm:text-xs">{description}</p>
           </div>
         </div>
       </CardContent>
@@ -730,7 +782,7 @@ function StatsCard({
 function CategoryCard({ title, count, icon }: { title: string; count: number; icon: React.ReactNode }) {
   return (
     <Card className="border-emerald-100 bg-white/70 backdrop-blur-sm">
-      <CardContent className="p-6">
+      <CardContent className="p-4 sm:p-6">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-medium text-emerald-600">{title}</p>
@@ -775,7 +827,7 @@ function ProductItem({ product }: { product: Product }) {
   }
 
   return (
-    <div className="flex items-center justify-between p-4 border border-emerald-100 rounded-lg hover:bg-emerald-50/50 bg-white/50">
+    <div className="flex min-h-[3.25rem] items-center justify-between gap-3 rounded-lg border border-emerald-100 bg-white/50 p-3 touch-manipulation active:bg-emerald-50/80 sm:p-4">
       <div className="flex items-center space-x-3">
         <div className={cn("p-2 rounded-full bg-emerald-50")}>
           {getCategoryIcon()}

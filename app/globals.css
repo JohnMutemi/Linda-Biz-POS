@@ -6,6 +6,19 @@
   .text-balance {
     text-wrap: balance;
   }
+
+  .tap-target {
+    @apply min-h-11 min-w-11 touch-manipulation;
+  }
+
+  .safe-pad-x {
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
+
+  .safe-pad-b {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
 }
 
 @layer base {
@@ -87,25 +100,28 @@
     @apply border-border;
   }
   html {
-    height: 100%;
-    overflow-y: hidden;
-  }
-  body {
-    height: 100%;
+    min-height: 100%;
     overflow-x: hidden;
     overflow-y: auto;
   }
   body {
+    min-height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
     @apply bg-background text-foreground;
   }
 }
 
 @layer components {
-  .dashboard-content-shell {
-    @apply px-3 pb-6 pt-3 sm:px-5 sm:pt-5 lg:px-8 lg:py-8;
+  .dashboard-sticky-header {
+    @apply sticky z-20 rounded-xl border border-emerald-100 bg-white/85 px-3 py-3 shadow-sm backdrop-blur-sm sm:px-4 sm:py-4;
+    top: max(3.5rem, env(safe-area-inset-top));
   }
 
-  .dashboard-sticky-header {
-    @apply sticky top-14 z-20 rounded-xl border border-emerald-100 bg-white/85 px-4 py-4 shadow-sm backdrop-blur-sm lg:top-4;
+  @media (min-width: 1024px) {
+    .dashboard-sticky-header {
+      top: max(1rem, env(safe-area-inset-top));
+    }
   }
 }
