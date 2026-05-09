@@ -6,6 +6,7 @@ import {
   getSessionMaxAgeSeconds,
   isPasswordHash,
   verifyPassword,
+  hashPassword,
 } from "@/lib/auth"
 import { isAdminEmail } from "@/lib/admin"
 
@@ -40,13 +41,19 @@ export async function POST(request: Request) {
     if (user.approval_status !== "approved") {
       return NextResponse.json({ error: "Account not approved." }, { status: 403 })
     }
-    if (!isPasswordHash(user.password)) {
-      // No plaintext fallback here intentionally—signup/login upgrades on login.
-      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
+    let isValidPassword = false
+    if (isPasswordHash(user.password)) {
+      isValidPassword = await verifyPassword(password, user.password)
+    } else {
+      // Backward compatibility for previously stored plaintext passwords.
+      isValidPassword = user.password === password
+      if (isValidPassword) {
+        const upgradedHash = await hashPassword(password)
+        await sql`UPDATE users SET password = ${upgradedHash} WHERE id = ${user.id}`
+      }
     }
 
-    const ok = await verifyPassword(password, user.password)
-    if (!ok) {
+    if (!isValidPassword) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
     }
 
