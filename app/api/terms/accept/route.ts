@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/database"
-import { isPasswordHash, verifyPassword } from "@/lib/auth"
+import {
+  createSessionToken,
+  getSessionCookieName,
+  getSessionMaxAgeSeconds,
+  isPasswordHash,
+  verifyPassword,
+} from "@/lib/auth"
+import { isAdminEmail } from "@/lib/admin"
 
 export async function POST(request: Request) {
   try {
@@ -18,7 +25,7 @@ export async function POST(request: Request) {
 
     const sql = await db()
     const users = await sql`
-      SELECT id, password, approval_status, suspended_at, deleted_at
+      SELECT id, name, email, phone, business_name, location, user_type, registration_date, password, approval_status, suspended_at, deleted_at
       FROM users
       WHERE email = ${email}
       LIMIT 1
@@ -49,7 +56,35 @@ export async function POST(request: Request) {
       WHERE id = ${user.id}
     `
 
-    return NextResponse.json({ success: true })
+    const isAdmin = isAdminEmail(user.email)
+    const token = await createSessionToken({ userId: user.id, email: user.email, isAdmin })
+    const response = NextResponse.json({
+      success: true,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone ?? "",
+        businessName: user.business_name,
+        location: user.location ?? "",
+        userType: user.user_type,
+        approvalStatus: user.approval_status,
+        isAdmin,
+        registrationDate: user.registration_date,
+      },
+    })
+
+    response.cookies.set({
+      name: getSessionCookieName(),
+      value: token,
+      httpOnly: true,
+      sameSite: "strict",
+      path: "/",
+      maxAge: getSessionMaxAgeSeconds(),
+      secure: process.env.NODE_ENV === "production",
+    })
+
+    return response
   } catch (error) {
     console.error("Terms accept error:", error)
     return NextResponse.json({ error: "Failed to accept terms" }, { status: 500 })

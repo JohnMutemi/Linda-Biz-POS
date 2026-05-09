@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { db } from "@/lib/database"
 import { getSessionTokenFromCookieHeader, verifySessionToken } from "@/lib/auth"
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib"
+import { verifyReportDownloadToken } from "@/lib/report-download-token"
 
 async function getAuthenticatedUserId(request: Request) {
   const token = getSessionTokenFromCookieHeader(request.headers.get("cookie"))
@@ -35,20 +36,31 @@ function endOfDay(date: Date) {
 
 export async function GET(request: Request) {
   try {
-    const authenticatedUserId = await getAuthenticatedUserId(request)
-    if (!authenticatedUserId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
     const { searchParams } = new URL(request.url)
-    const userId = searchParams.get("userId")
-    const filterType = (searchParams.get("filterType") || "today") as "today" | "week" | "month" | "custom"
+    const reportToken = searchParams.get("reportToken")
+    let userId = searchParams.get("userId")
+    let filterType = (searchParams.get("filterType") || "today") as "today" | "week" | "month" | "custom"
     const startDateRaw = searchParams.get("startDate")
     const endDateRaw = searchParams.get("endDate")
-    const periodLabelRaw = searchParams.get("periodLabel")
+    let periodLabelRaw = searchParams.get("periodLabel")
 
-    if (!userId || userId !== authenticatedUserId) {
-      return NextResponse.json({ error: "userId is required" }, { status: 400 })
+    if (reportToken) {
+      try {
+        const decoded = await verifyReportDownloadToken(reportToken)
+        userId = decoded.userId
+        filterType = decoded.filterType
+        periodLabelRaw = decoded.periodLabel || periodLabelRaw
+      } catch {
+        return NextResponse.json({ error: "Invalid or expired download link" }, { status: 401 })
+      }
+    } else {
+      const authenticatedUserId = await getAuthenticatedUserId(request)
+      if (!authenticatedUserId) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      }
+      if (!userId || userId !== authenticatedUserId) {
+        return NextResponse.json({ error: "userId is required" }, { status: 400 })
+      }
     }
 
     const now = new Date()

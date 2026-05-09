@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/database"
 import { getSessionTokenFromCookieHeader, verifySessionToken } from "@/lib/auth"
-import { buildSalesPageUrl, buildSalesReportDownloadUrl, sendSaleNotificationEmail } from "@/lib/mailer"
+import { buildSalesPageUrl, sendSaleNotificationEmail } from "@/lib/mailer"
+import { createReportDownloadToken } from "@/lib/report-download-token"
 
 async function getAuthenticatedUserId(request: Request) {
   const token = getSessionTokenFromCookieHeader(request.headers.get("cookie"))
@@ -184,7 +185,22 @@ export async function POST(request: Request) {
         const owner = ownerRows[0]
         const ownerEmail = String(owner.email ?? "").trim()
         if (ownerEmail) {
-          const reportUrl = buildSalesReportDownloadUrl(String(userId), "today", request.headers.get("origin") ?? undefined)
+          const token = await createReportDownloadToken(
+            {
+              scope: "sales_report_download",
+              userId: String(userId),
+              filterType: "today",
+              periodLabel: `Today (${new Date().toLocaleDateString()})`,
+            },
+            60 * 60 * 24,
+          )
+          const baseUrl =
+            process.env.NEXT_PUBLIC_APP_URL ||
+            process.env.NEXT_PUBLIC_BASE_URL ||
+            process.env.APP_URL ||
+            request.headers.get("origin") ||
+            "http://localhost:3000"
+          const reportUrl = `${baseUrl.replace(/\/+$/, "")}/api/sales/report/pdf?reportToken=${encodeURIComponent(token)}`
           const salesPageUrl = buildSalesPageUrl(request.headers.get("origin") ?? undefined)
           const emailResult = await sendSaleNotificationEmail({
             to: ownerEmail,
