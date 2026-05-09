@@ -140,91 +140,278 @@ export async function GET(request: Request) {
     const page = pdfDoc.addPage()
     const { width, height } = page.getSize()
 
-    const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
-    const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
+    const font = await pdfDoc.embedFont(StandardFonts.TimesRoman)
+    const fontBold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold)
+
+    const palette = {
+      ink: rgb(0.09, 0.08, 0.07),
+      mutedInk: rgb(0.35, 0.31, 0.26),
+      accent: rgb(0.72, 0.58, 0.31),
+      panel: rgb(0.98, 0.97, 0.94),
+      line: rgb(0.85, 0.79, 0.69),
+      white: rgb(1, 1, 1),
+    }
 
     const margin = 40
+    const contentWidth = width - margin * 2
+    const pad = 12
     let y = height - margin
 
-    const title = "Sales Report"
-    page.drawText(title, { x: margin, y, size: 18, font: fontBold, color: rgb(0.02, 0.43, 0.25) })
-    y -= 24
-    if (businessName) {
-      page.drawText(`Business: ${businessName}`, { x: margin, y, size: 11, font: fontBold, color: rgb(0.06, 0.1, 0.17) })
-      y -= 16
+    const truncateText = (value: string, maxWidth: number, activeFont = font, size = 9) => {
+      if (activeFont.widthOfTextAtSize(value, size) <= maxWidth) return value
+      const ellipsis = "..."
+      let end = value.length
+      while (end > 0) {
+        const candidate = `${value.slice(0, end).trimEnd()}${ellipsis}`
+        if (activeFont.widthOfTextAtSize(candidate, size) <= maxWidth) return candidate
+        end -= 1
+      }
+      return ellipsis
     }
-    page.drawText(`Generated: ${new Date().toLocaleString()}`, { x: margin, y, size: 10, font, color: rgb(0.2, 0.2, 0.2) })
-    y -= 16
-    page.drawText(`Period: ${periodLabel}`, { x: margin, y, size: 11, font: fontBold, color: rgb(0.06, 0.1, 0.17) })
-    y -= 16
-    page.drawText(`Transactions: ${totalTransactions}`, { x: margin, y, size: 11, font })
-    y -= 14
-    page.drawText(`Items sold: ${totalItems}`, { x: margin, y, size: 11, font })
-    y -= 14
-    page.drawText(`Revenue: KSh ${Math.round(totalRevenue).toLocaleString()}`, { x: margin, y, size: 11, font: fontBold })
-    y -= 14
-    page.drawText(`Average sale: KSh ${Math.round(average).toLocaleString()}`, { x: margin, y, size: 11, font })
 
-    y -= 20
-    page.drawText("Sales summary", { x: margin, y, size: 12, font: fontBold, color: rgb(0.06, 0.1, 0.17) })
-    y -= 14
+    const drawSectionLabel = (label: string, sectionY: number) => {
+      page.drawText(label.toUpperCase(), { x: margin, y: sectionY, size: 9, font: fontBold, color: palette.accent })
+      page.drawLine({
+        start: { x: margin + 130, y: sectionY + 3 },
+        end: { x: width - margin, y: sectionY + 3 },
+        thickness: 0.8,
+        color: palette.line,
+      })
+      return sectionY - 14
+    }
+
+    // Header band
+    const headerHeight = 88
+    const headerY = y - headerHeight
+    page.drawRectangle({
+      x: margin,
+      y: headerY,
+      width: contentWidth,
+      height: headerHeight,
+      color: palette.ink,
+    })
+    page.drawText("Sales Report", {
+      x: margin + pad,
+      y: headerY + headerHeight - 30,
+      size: 20,
+      font: fontBold,
+      color: palette.white,
+    })
+    page.drawText(`Period: ${periodLabel}`, {
+      x: margin + pad,
+      y: headerY + headerHeight - 48,
+      size: 10,
+      font,
+      color: rgb(0.92, 0.88, 0.76),
+    })
+    page.drawText(`Generated: ${new Date().toLocaleString()}`, {
+      x: margin + pad,
+      y: headerY + 16,
+      size: 9.5,
+      font,
+      color: rgb(0.89, 0.85, 0.74),
+    })
+    if (businessName) {
+      page.drawText(truncateText(`Business: ${businessName}`, contentWidth * 0.45, fontBold, 10), {
+        x: margin + contentWidth - contentWidth * 0.45 - pad,
+        y: headerY + 16,
+        size: 10,
+        font: fontBold,
+        color: palette.white,
+      })
+    }
+    y = headerY - 18
+
+    // Metrics cards
+    const cardGap = 10
+    const cardWidth = (contentWidth - cardGap * 1) / 2
+    const cardHeight = 46
+    const stats: Array<{ label: string; value: string }> = [
+      { label: "Revenue", value: `KSh ${Math.round(totalRevenue).toLocaleString()}` },
+      { label: "Average Sale", value: `KSh ${Math.round(average).toLocaleString()}` },
+      { label: "Transactions", value: `${totalTransactions}` },
+      { label: "Items Sold", value: `${totalItems}` },
+    ]
+    for (let i = 0; i < stats.length; i++) {
+      const row = Math.floor(i / 2)
+      const col = i % 2
+      const x = margin + col * (cardWidth + cardGap)
+      const cardY = y - row * (cardHeight + 8) - cardHeight
+      page.drawRectangle({
+        x,
+        y: cardY,
+        width: cardWidth,
+        height: cardHeight,
+        color: rgb(0.99, 0.98, 0.95),
+        borderColor: palette.line,
+        borderWidth: 1,
+      })
+      page.drawText(stats[i].label, { x: x + pad, y: cardY + 28, size: 9, font, color: palette.mutedInk })
+      page.drawText(stats[i].value, { x: x + pad, y: cardY + 12, size: 13, font: fontBold, color: palette.ink })
+    }
+    y = y - 2 * (cardHeight + 8) - 8
+
+    // Executive summary
+    y = drawSectionLabel("Executive Summary", y)
     const performanceNote =
       totalTransactions === 0
         ? "No transactions were recorded for this period."
         : `This period recorded ${totalTransactions} transactions, ${totalItems} items sold, and KSh ${Math.round(
             totalRevenue,
           ).toLocaleString()} in revenue.`
-    page.drawText(performanceNote, { x: margin, y, size: 9.5, font, color: rgb(0.15, 0.15, 0.15) })
-    y -= 20
+    page.drawRectangle({
+      x: margin,
+      y: y - 30,
+      width: contentWidth,
+      height: 30,
+      color: rgb(0.99, 0.98, 0.95),
+      borderColor: palette.line,
+      borderWidth: 1,
+    })
+    page.drawText(truncateText(performanceNote, contentWidth - pad * 2, font, 9.5), {
+      x: margin + pad,
+      y: y - 18,
+      size: 9.5,
+      font,
+      color: palette.ink,
+    })
+    y -= 42
 
+    // Top products
+    y = drawSectionLabel("Top Selling Products", y)
     if (topProducts.length > 0) {
-      page.drawText("Top selling products", { x: margin, y, size: 12, font: fontBold, color: rgb(0.06, 0.1, 0.17) })
-      y -= 14
       for (const [name, qty] of topProducts) {
-        if (y < margin + 20) break
-        page.drawText(`- ${name}: ${qty} unit${qty === 1 ? "" : "s"} sold`, {
-          x: margin,
+        if (y < margin + 70) break
+        page.drawText("•", { x: margin + 2, y, size: 11, font, color: palette.accent })
+        page.drawText(truncateText(name, contentWidth - 120, font, 9.5), {
+          x: margin + 14,
           y,
           size: 9.5,
           font,
-          color: rgb(0.15, 0.15, 0.15),
+          color: palette.ink,
         })
-        y -= 12
+        const qtyText = `${qty} unit${qty === 1 ? "" : "s"}`
+        const qtyWidth = fontBold.widthOfTextAtSize(qtyText, 9.5)
+        page.drawText(qtyText, {
+          x: margin + contentWidth - qtyWidth,
+          y,
+          size: 9.5,
+          font: fontBold,
+          color: palette.mutedInk,
+        })
+        y -= 13
       }
-      y -= 10
-    }
-
-    page.drawText("Recent transactions", { x: margin, y, size: 12, font: fontBold, color: rgb(0.06, 0.1, 0.17) })
-    y -= 16
-
-    const maxRows = 18
-    const shown = salesRows.slice(0, maxRows)
-    for (const sale of shown) {
-      const saleDate = new Date(sale.date as string).toLocaleString()
-      const idShort = String(sale.id).split("_")[1] || String(sale.id).slice(0, 8)
-      const amount = `KSh ${Math.round(Number(sale.total)).toLocaleString()}`
-
-      const itemNames = itemsRows
-        .filter((it) => it.sale_id === sale.id)
-        .slice(0, 3)
-        .map((it) => `${it.product_name}×${it.quantity}`)
-        .join(", ")
-
-      const line = `${saleDate}  |  ${idShort}  |  ${amount}${itemNames ? `  |  ${itemNames}` : ""}`
-      if (y < margin + 20) break
-      page.drawText(line, { x: margin, y, size: 9, font, color: rgb(0.15, 0.15, 0.15) })
-      y -= 12
-    }
-
-    if (salesRows.length > maxRows && y > margin + 12) {
-      page.drawText(`…and ${salesRows.length - maxRows} more`, {
+    } else {
+      page.drawText("No product sales data available for this period.", {
         x: margin,
         y,
-        size: 9,
+        size: 9.5,
         font,
-        color: rgb(0.35, 0.35, 0.35),
+        color: palette.mutedInk,
       })
+      y -= 13
     }
+    y -= 10
+
+    // Recent transactions as a table
+    y = drawSectionLabel("Recent Transactions", y)
+    const tableTop = y
+    const rowHeight = 14
+    const colDate = margin
+    const colId = margin + 142
+    const colAmount = margin + 230
+    const colItems = margin + 320
+
+    page.drawRectangle({
+      x: margin,
+      y: tableTop - rowHeight,
+      width: contentWidth,
+      height: rowHeight,
+      color: rgb(0.18, 0.16, 0.13),
+      borderColor: palette.line,
+      borderWidth: 1,
+    })
+    page.drawText("Date", { x: colDate + 6, y: tableTop - 10, size: 8.5, font: fontBold, color: rgb(0.94, 0.9, 0.79) })
+    page.drawText("Sale ID", { x: colId + 6, y: tableTop - 10, size: 8.5, font: fontBold, color: rgb(0.94, 0.9, 0.79) })
+    page.drawText("Amount", { x: colAmount + 6, y: tableTop - 10, size: 8.5, font: fontBold, color: rgb(0.94, 0.9, 0.79) })
+    page.drawText("Items", { x: colItems + 6, y: tableTop - 10, size: 8.5, font: fontBold, color: rgb(0.94, 0.9, 0.79) })
+
+    y = tableTop - rowHeight
+    const maxRows = 11
+    const shown = salesRows.slice(0, maxRows)
+    for (const sale of shown) {
+      if (y < margin + 26) break
+      page.drawRectangle({
+        x: margin,
+        y: y - rowHeight,
+        width: contentWidth,
+        height: rowHeight,
+        color: palette.white,
+        borderColor: palette.line,
+        borderWidth: 1,
+      })
+
+      const saleDate = new Date(sale.date as string).toLocaleDateString()
+      const idShort = String(sale.id).split("_")[1] || String(sale.id).slice(0, 8)
+      const amount = `KSh ${Math.round(Number(sale.total)).toLocaleString()}`
+      const itemNames = itemsRows
+        .filter((it) => it.sale_id === sale.id)
+        .slice(0, 2)
+        .map((it) => `${it.product_name}x${it.quantity}`)
+        .join(", ")
+
+      page.drawText(truncateText(saleDate, 130, font, 8.5), { x: colDate + 6, y: y - 10, size: 8.5, font, color: palette.ink })
+      page.drawText(truncateText(idShort, 80, font, 8.5), { x: colId + 6, y: y - 10, size: 8.5, font, color: palette.ink })
+      page.drawText(truncateText(amount, 84, fontBold, 8.5), {
+        x: colAmount + 6,
+        y: y - 10,
+        size: 8.5,
+        font: fontBold,
+        color: palette.ink,
+      })
+      page.drawText(truncateText(itemNames || "-", contentWidth - (colItems - margin) - 12, font, 8.5), {
+        x: colItems + 6,
+        y: y - 10,
+        size: 8.5,
+        font,
+        color: palette.mutedInk,
+      })
+
+      y -= rowHeight
+    }
+
+    if (salesRows.length > maxRows && y > margin + 20) {
+      page.drawText(`+ ${salesRows.length - maxRows} more transactions not shown`, {
+        x: margin,
+        y: y - 12,
+        size: 8.5,
+        font,
+        color: palette.mutedInk,
+      })
+      y -= 16
+    }
+
+    // Footer
+    page.drawLine({
+      start: { x: margin, y: margin + 8 },
+      end: { x: width - margin, y: margin + 8 },
+      thickness: 1,
+      color: palette.line,
+    })
+    page.drawText("Confidential business document", {
+      x: margin,
+      y: margin - 2,
+      size: 8,
+      font,
+      color: palette.mutedInk,
+    })
+    page.drawText("Generated by PointOfSale", {
+      x: width - margin - 95,
+      y: margin - 2,
+      size: 8,
+      font,
+      color: palette.mutedInk,
+    })
 
     const pdfBytes = await pdfDoc.save()
     const periodText =
