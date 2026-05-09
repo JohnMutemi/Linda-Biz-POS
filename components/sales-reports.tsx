@@ -343,24 +343,29 @@ export function SalesReports({ userId, businessName }: SalesReportsProps) {
         </div>
 
         {/* Download Button */}
-        <div className="flex justify-center pt-4">
+        <div className="sticky bottom-0 -mx-2 rounded-xl border border-emerald-100 bg-white/95 p-2 backdrop-blur supports-[backdrop-filter]:bg-white/80 sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0">
           <Button
             onClick={generatePDFReport}
             disabled={isGenerating || filteredSales.length === 0}
-            className="min-h-12 w-full max-w-md touch-manipulation bg-emerald-600 hover:bg-emerald-700 sm:w-auto"
+            className="min-h-12 w-full touch-manipulation bg-emerald-600 text-sm hover:bg-emerald-700 sm:mx-auto sm:max-w-md sm:text-base"
           >
             {isGenerating ? (
               <>
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Generating Report...
+                <span className="sm:hidden">Generating PDF...</span>
+                <span className="hidden sm:inline">Generating Report...</span>
               </>
             ) : (
               <>
                 <Download className="mr-2 h-4 w-4" />
-                Download Report ({filteredSales.length} transactions)
+                <span className="sm:hidden">Download PDF</span>
+                <span className="hidden sm:inline">Download Report ({filteredSales.length} transactions)</span>
               </>
             )}
           </Button>
+          <p className="mt-2 px-1 text-center text-xs text-emerald-700 sm:hidden">
+            {filteredSales.length} transaction{filteredSales.length === 1 ? "" : "s"} in selected period
+          </p>
         </div>
       </CardContent>
     </Card>

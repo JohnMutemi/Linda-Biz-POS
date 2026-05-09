@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/database"
 import { getSessionTokenFromCookieHeader, verifySessionToken } from "@/lib/auth"
+import { buildSalesPageUrl, buildSalesReportDownloadUrl, sendSaleNotificationEmail } from "@/lib/mailer"
 
 async function getAuthenticatedUserId(request: Request) {
   const token = getSessionTokenFromCookieHeader(request.headers.get("cookie"))
@@ -171,6 +172,43 @@ export async function POST(request: Request) {
       }
 
       await sql`COMMIT`
+
+      const ownerRows = await sql`
+        SELECT name, email, business_name
+        FROM users
+        WHERE id = ${userId}
+        LIMIT 1
+      `
+
+      if (ownerRows.length > 0) {
+        const owner = ownerRows[0]
+        const ownerEmail = String(owner.email ?? "").trim()
+        if (ownerEmail) {
+          const reportUrl = buildSalesReportDownloadUrl(String(userId), "today", request.headers.get("origin") ?? undefined)
+          const salesPageUrl = buildSalesPageUrl(request.headers.get("origin") ?? undefined)
+          const emailResult = await sendSaleNotificationEmail({
+            to: ownerEmail,
+            recipientName: String(owner.name ?? "Business Owner"),
+            businessName: String(owner.business_name ?? "Your Business"),
+            saleId: String(id),
+            soldAt: new Date(date || new Date().toISOString()).toLocaleString(),
+            total: Number(total ?? 0),
+            itemCount: Number(itemCount ?? items.length ?? 0),
+            items: items.map((item: any) => ({
+              productName: String(item.productName ?? "Item"),
+              quantity: Number(item.quantity ?? 0),
+              subtotal: Number(item.subtotal ?? 0),
+            })),
+            salesPageUrl,
+            reportDownloadUrl: reportUrl,
+          })
+
+          if (!emailResult.sent) {
+            console.warn("Sale notification email failed:", emailResult.reason)
+          }
+        }
+      }
+
       return NextResponse.json({ success: true })
     } catch (error) {
       await sql`ROLLBACK`

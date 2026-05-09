@@ -179,6 +179,13 @@ export async function GET(request: Request) {
       })
       return sectionY - 14
     }
+    const brandInitials =
+      businessName
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((part) => part[0]?.toUpperCase() ?? "")
+        .join("") || "PO"
 
     // Header band
     const headerHeight = 88
@@ -210,6 +217,25 @@ export async function GET(request: Request) {
       size: 9.5,
       font,
       color: rgb(0.89, 0.85, 0.74),
+    })
+    const logoBoxSize = 40
+    const logoX = margin + contentWidth - pad - logoBoxSize
+    const logoY = headerY + headerHeight - pad - logoBoxSize
+    page.drawRectangle({
+      x: logoX,
+      y: logoY,
+      width: logoBoxSize,
+      height: logoBoxSize,
+      borderColor: rgb(0.94, 0.9, 0.79),
+      borderWidth: 1.2,
+    })
+    const initialsWidth = fontBold.widthOfTextAtSize(brandInitials, 14)
+    page.drawText(brandInitials, {
+      x: logoX + (logoBoxSize - initialsWidth) / 2,
+      y: logoY + 14,
+      size: 14,
+      font: fontBold,
+      color: rgb(0.94, 0.9, 0.79),
     })
     if (businessName) {
       page.drawText(truncateText(`Business: ${businessName}`, contentWidth * 0.45, fontBold, 10), {
@@ -339,14 +365,15 @@ export async function GET(request: Request) {
     y = tableTop - rowHeight
     const maxRows = 11
     const shown = salesRows.slice(0, maxRows)
-    for (const sale of shown) {
+    for (let i = 0; i < shown.length; i++) {
+      const sale = shown[i]
       if (y < margin + 26) break
       page.drawRectangle({
         x: margin,
         y: y - rowHeight,
         width: contentWidth,
         height: rowHeight,
-        color: palette.white,
+        color: i % 2 === 0 ? palette.white : rgb(0.99, 0.98, 0.95),
         borderColor: palette.line,
         borderWidth: 1,
       })
