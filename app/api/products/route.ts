@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/database"
 import { getSessionTokenFromCookieHeader, verifySessionToken } from "@/lib/auth"
+import { buildProductsPageUrl, sendProductChangeEmail } from "@/lib/mailer"
 
 async function getAuthenticatedUserId(request: Request) {
   const token = getSessionTokenFromCookieHeader(request.headers.get("cookie"))
@@ -10,6 +11,61 @@ async function getAuthenticatedUserId(request: Request) {
     return session.userId
   } catch {
     return null
+  }
+}
+
+async function notifyOwnerProductChange(args: {
+  request: Request
+  userId: string
+  changeType: "created" | "updated" | "deleted" | "merged" | "adjusted"
+  before?: {
+    id: string
+    name: string
+    category?: string
+    unit?: string
+    price?: number
+    quantity?: number
+    reorderLevel?: number
+  }
+  after?: {
+    id: string
+    name: string
+    category?: string
+    unit?: string
+    price?: number
+    quantity?: number
+    reorderLevel?: number
+  }
+}) {
+  try {
+    const sql = await db()
+    const ownerRows = await sql`
+      SELECT name, email, business_name
+      FROM users
+      WHERE id = ${args.userId}
+      LIMIT 1
+    `
+    if (ownerRows.length === 0) return
+    const owner = ownerRows[0]
+    const ownerEmail = String(owner.email ?? "").trim()
+    if (!ownerEmail) return
+
+    const productsPageUrl = buildProductsPageUrl(args.request.headers.get("origin") ?? undefined)
+    const result = await sendProductChangeEmail({
+      to: ownerEmail,
+      recipientName: String(owner.name ?? "Business Owner"),
+      businessName: String(owner.business_name ?? "Your Business"),
+      changeType: args.changeType,
+      changedAt: new Date().toLocaleString(),
+      before: args.before,
+      after: args.after,
+      productsPageUrl,
+    })
+    if (!result.sent) {
+      console.warn("Product change email failed:", result.reason)
+    }
+  } catch (e) {
+    console.warn("Product change notify error:", e)
   }
 }
 
@@ -133,6 +189,29 @@ export async function POST(request: Request) {
           )
         `
         await sql`COMMIT`
+        await notifyOwnerProductChange({
+          request,
+          userId: String(userId),
+          changeType: "merged",
+          before: {
+            id: existingId,
+            name: String(name),
+            category: String(category),
+            unit: String(unit),
+            price: Number(price),
+            quantity: beforeQty,
+            reorderLevel: reorder,
+          },
+          after: {
+            id: existingId,
+            name: String(name),
+            category: String(category),
+            unit: String(unit),
+            price: Number(price),
+            quantity: afterQty,
+            reorderLevel: reorder,
+          },
+        })
         return NextResponse.json({ success: true, merged: true, productId: existingId })
       }
 
@@ -179,6 +258,20 @@ export async function POST(request: Request) {
       throw error
     }
 
+    await notifyOwnerProductChange({
+      request,
+      userId: String(userId),
+      changeType: "created",
+      after: {
+        id: String(id),
+        name: String(name),
+        category: String(category),
+        unit: String(unit),
+        price: Number(price),
+        quantity: Number(addQty),
+        reorderLevel: Number.isFinite(Number(reorderLevel)) ? Number(reorderLevel) : 5,
+      },
+    })
     return NextResponse.json({ success: true, merged: false })
   } catch (error) {
     console.error("Create product error:", error)
@@ -213,7 +306,7 @@ export async function PUT(request: Request) {
     await sql`BEGIN`
     try {
       const existingRows = await sql`
-        SELECT quantity, reorder_level
+        SELECT name, price, quantity, unit, category, reorder_level
         FROM products
         WHERE id = ${id} AND user_id = ${userId}
         LIMIT 1
@@ -223,6 +316,15 @@ export async function PUT(request: Request) {
         return NextResponse.json({ error: "Product not found" }, { status: 404 })
       }
 
+      const before = {
+        id: String(id),
+        name: String(existingRows[0].name ?? ""),
+        category: String(existingRows[0].category ?? ""),
+        unit: String(existingRows[0].unit ?? ""),
+        price: Number(existingRows[0].price),
+        quantity: Number(existingRows[0].quantity),
+        reorderLevel: Number(existingRows[0].reorder_level ?? 5),
+      }
       const beforeQty = Number(existingRows[0].quantity)
       const nextQty = Number(quantity)
       const qtyDelta = nextQty - beforeQty
@@ -279,6 +381,21 @@ export async function PUT(request: Request) {
       }
 
       await sql`COMMIT`
+      await notifyOwnerProductChange({
+        request,
+        userId: String(userId),
+        changeType: qtyDelta !== 0 ? "adjusted" : "updated",
+        before,
+        after: {
+          id: String(id),
+          name: String(name ?? before.name),
+          category: String(category ?? before.category),
+          unit: String(unit ?? before.unit),
+          price: Number(price ?? before.price),
+          quantity: Number(nextQty),
+          reorderLevel: Number(nextReorderLevel),
+        },
+      })
     } catch (error) {
       await sql`ROLLBACK`
       throw error
@@ -310,7 +427,26 @@ export async function DELETE(request: Request) {
     }
 
     const sql = await db()
+    const beforeRows = await sql`
+      SELECT id, name, price, quantity, unit, category, reorder_level
+      FROM products
+      WHERE id = ${id} AND user_id = ${userId}
+      LIMIT 1
+    `
     await sql`DELETE FROM products WHERE id = ${id} AND user_id = ${userId}`
+    const before =
+      beforeRows.length > 0
+        ? {
+            id: String(beforeRows[0].id),
+            name: String(beforeRows[0].name ?? ""),
+            category: String(beforeRows[0].category ?? ""),
+            unit: String(beforeRows[0].unit ?? ""),
+            price: Number(beforeRows[0].price),
+            quantity: Number(beforeRows[0].quantity),
+            reorderLevel: Number(beforeRows[0].reorder_level ?? 5),
+          }
+        : undefined
+    await notifyOwnerProductChange({ request, userId: String(userId), changeType: "deleted", before })
 
     return NextResponse.json({ success: true })
   } catch (error) {
