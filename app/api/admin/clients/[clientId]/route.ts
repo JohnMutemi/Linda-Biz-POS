@@ -2,9 +2,17 @@ import { randomBytes } from "crypto"
 import { NextResponse } from "next/server"
 import { db } from "@/lib/database"
 import { getAdminSession } from "@/lib/admin-auth"
-import { buildLoginUrl, sendLoginRouteEmail } from "@/lib/mailer"
+import { hashPassword } from "@/lib/auth"
+import { buildLoginUrl, buildOwnerAdminLoginUrl, sendApprovedAccessEmail, sendBusinessAdminCredentialsEmail, sendLoginRouteEmail } from "@/lib/mailer"
 
-type ActionType = "approve" | "reject" | "send-login-route" | "suspend" | "unsuspend" | "delete"
+type ActionType =
+  | "approve"
+  | "reject"
+  | "send-login-route"
+  | "send-business-admin-credentials"
+  | "suspend"
+  | "unsuspend"
+  | "delete"
 
 export async function POST(
   request: Request,
@@ -48,10 +56,17 @@ export async function POST(
     if (action === "approve") {
       const token = client.login_route_token || randomBytes(24).toString("hex")
       const loginUrl = buildLoginUrl(token, client.email, requestOrigin)
-      const emailResult = await sendLoginRouteEmail({
+      const ownerAdminPassword = randomBytes(6).toString("base64url")
+      const ownerAdminPasswordHash = await hashPassword(ownerAdminPassword)
+      const ownerAdminEmail = client.email
+      const ownerAdminLoginUrl = buildOwnerAdminLoginUrl(ownerAdminEmail, requestOrigin)
+      const emailResult = await sendApprovedAccessEmail({
         to: client.email,
         recipientName: client.name,
-        loginUrl,
+        userLoginUrl: loginUrl,
+        ownerAdminLoginUrl,
+        ownerAdminEmail,
+        ownerAdminPassword,
       })
 
       await sql`
@@ -62,6 +77,11 @@ export async function POST(
           approved_by = ${admin.email},
           login_route_token = ${token},
           login_route_sent_at = NOW(),
+          owner_admin_email = ${ownerAdminEmail},
+          owner_admin_password = ${ownerAdminPasswordHash},
+          owner_admin_must_reset = TRUE,
+          owner_admin_enabled_at = NOW(),
+          owner_admin_issued_at = NOW(),
           terms_accepted_at = NULL
         WHERE id = ${clientId}
       `
@@ -74,11 +94,14 @@ export async function POST(
       return NextResponse.json({
         success: true,
         message: emailResult.sent
-          ? "Client approved and login route sent to client email."
-          : "Client approved. Email provider is not configured, login route was generated for manual sharing.",
+          ? "Client approved and user + business admin credentials sent to client email."
+          : "Client approved. Email provider is not configured, credentials were generated for manual sharing.",
         emailSent: emailResult.sent,
         emailIssue: emailResult.sent ? null : emailResult.reason,
         loginUrl,
+        ownerAdminEmail,
+        ownerAdminPassword,
+        ownerAdminLoginUrl,
       })
     }
 
@@ -91,6 +114,52 @@ export async function POST(
       await insertAuditLog("reject", "Client registration rejected.")
 
       return NextResponse.json({ success: true, message: "Client rejected" })
+    }
+
+    if (action === "send-business-admin-credentials") {
+      if (client.approval_status !== "approved") {
+        return NextResponse.json({ error: "Client must be approved first." }, { status: 400 })
+      }
+
+      const ownerAdminPassword = randomBytes(6).toString("base64url")
+      const ownerAdminPasswordHash = await hashPassword(ownerAdminPassword)
+      const ownerAdminEmail = client.email
+      const ownerAdminLoginUrl = buildOwnerAdminLoginUrl(ownerAdminEmail, requestOrigin)
+
+      const emailResult = await sendBusinessAdminCredentialsEmail({
+        to: client.email,
+        recipientName: client.name,
+        ownerAdminLoginUrl,
+        ownerAdminEmail,
+        ownerAdminPassword,
+      })
+
+      await sql`
+        UPDATE users
+        SET
+          owner_admin_email = ${ownerAdminEmail},
+          owner_admin_password = ${ownerAdminPasswordHash},
+          owner_admin_must_reset = TRUE,
+          owner_admin_enabled_at = COALESCE(owner_admin_enabled_at, NOW()),
+          owner_admin_issued_at = NOW()
+        WHERE id = ${clientId}
+      `
+      await insertAuditLog(
+        "send-business-admin-credentials",
+        emailResult.sent ? "Business admin credentials re-issued and emailed." : `Re-issued. Email failed: ${emailResult.reason}`,
+      )
+
+      return NextResponse.json({
+        success: true,
+        message: emailResult.sent
+          ? "Business admin credentials re-issued and sent to client email."
+          : "Business admin credentials re-issued. Email provider is not configured, credentials were generated for manual sharing.",
+        emailSent: emailResult.sent,
+        emailIssue: emailResult.sent ? null : emailResult.reason,
+        ownerAdminEmail,
+        ownerAdminPassword,
+        ownerAdminLoginUrl,
+      })
     }
 
     if (action === "suspend") {

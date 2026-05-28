@@ -39,6 +39,12 @@ export async function initDatabase() {
       suspended_at TIMESTAMPTZ,
       suspended_reason TEXT,
       deleted_at TIMESTAMPTZ
+      ,
+      owner_admin_email TEXT,
+      owner_admin_password TEXT,
+      owner_admin_must_reset BOOLEAN NOT NULL DEFAULT TRUE,
+      owner_admin_enabled_at TIMESTAMPTZ,
+      owner_admin_issued_at TIMESTAMPTZ
     )
   `
 
@@ -53,6 +59,11 @@ export async function initDatabase() {
   await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS suspended_at TIMESTAMPTZ`
   await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS suspended_reason TEXT`
   await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ`
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS owner_admin_email TEXT`
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS owner_admin_password TEXT`
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS owner_admin_must_reset BOOLEAN NOT NULL DEFAULT TRUE`
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS owner_admin_enabled_at TIMESTAMPTZ`
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS owner_admin_issued_at TIMESTAMPTZ`
 
   const adminEmails = Array.from(getAdminEmails())
   const adminSeedPassword = process.env.ADMIN_DEFAULT_PASSWORD
@@ -169,6 +180,19 @@ export async function initDatabase() {
   `
   await sql`CREATE INDEX IF NOT EXISTS inventory_movements_user_created_idx ON inventory_movements(user_id, created_at DESC)`
   await sql`CREATE INDEX IF NOT EXISTS inventory_movements_product_created_idx ON inventory_movements(product_id, created_at DESC)`
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS business_activity_logs (
+      id BIGSERIAL PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      action TEXT NOT NULL,
+      entity_type TEXT NOT NULL,
+      entity_id TEXT,
+      note TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `
+  await sql`CREATE INDEX IF NOT EXISTS business_activity_logs_user_created_idx ON business_activity_logs(user_id, created_at DESC)`
 
   await sql`
     CREATE TABLE IF NOT EXISTS sales (

@@ -55,6 +55,7 @@ export async function GET(request: Request) {
       userType: user.user_type,
       approvalStatus: user.approval_status,
       isAdmin,
+      isBusinessAdminPanel: session.isBusinessAdminPanel === true,
       registrationDate: user.registration_date,
     })
   } catch {

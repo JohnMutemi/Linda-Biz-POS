@@ -8,6 +8,8 @@ export type SessionPayload = {
   userId: string
   email: string
   isAdmin?: boolean
+  isBusinessAdminPanel?: boolean
+  ownerAdminMustReset?: boolean
 }
 
 function getJwtSecret() {
@@ -51,12 +53,20 @@ export async function verifySessionToken(token: string) {
   const userId = payload.userId
   const email = payload.email
   const isAdmin = payload.isAdmin
+  const isBusinessAdminPanel = payload.isBusinessAdminPanel
+  const ownerAdminMustReset = payload.ownerAdminMustReset
 
   if (typeof userId !== "string" || typeof email !== "string") {
     throw new Error("Invalid token payload")
   }
 
-  return { userId, email, isAdmin: isAdmin === true }
+  return {
+    userId,
+    email,
+    isAdmin: isAdmin === true,
+    isBusinessAdminPanel: isBusinessAdminPanel === true,
+    ownerAdminMustReset: ownerAdminMustReset === true,
+  }
 }
 
 export function getSessionTokenFromCookieHeader(cookieHeader: string | null) {

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -29,10 +29,12 @@ interface CartItem extends Product {
 }
 
 export default function SalesPage() {
+  const PAGE_SIZE = 5
   const [products, setProducts] = useState<Product[]>([])
   const [cart, setCart] = useState<CartItem[]>([])
   const [user, setUser] = useState<any>(null)
   const [searchTerm, setSearchTerm] = useState("")
+  const [currentPage, setCurrentPage] = useState(1)
   const [isProcessing, setIsProcessing] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
@@ -217,7 +219,9 @@ export default function SalesPage() {
       })
 
       // Trigger dashboard refresh
+      localStorage.setItem("lindabiz_last_sale_update", Date.now().toString())
       window.dispatchEvent(new Event("dashboard-refresh"))
+      window.dispatchEvent(new Event("inventory-refresh"))
 
       console.log("Sale completed successfully:", {
         saleId: sale.id,
@@ -241,6 +245,22 @@ export default function SalesPage() {
       product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.category.toLowerCase().includes(searchTerm.toLowerCase()),
   )
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE))
+  const paginatedProducts = useMemo(() => {
+    const safePage = Math.min(currentPage, totalPages)
+    const start = (safePage - 1) * PAGE_SIZE
+    return filteredProducts.slice(start, start + PAGE_SIZE)
+  }, [currentPage, filteredProducts, totalPages])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm])
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages)
+    }
+  }, [currentPage, totalPages])
 
   if (!user) {
     return (
@@ -316,6 +336,9 @@ export default function SalesPage() {
                     className="h-12 min-h-11 border-emerald-200 text-base focus:border-emerald-400"
                   />
                 </div>
+                <p className="mb-3 text-sm text-emerald-700">
+                  {filteredProducts.length} filtered • page {currentPage} of {totalPages}
+                </p>
 
                 {filteredProducts.length === 0 ? (
                   <div className="text-center py-8">
@@ -336,7 +359,7 @@ export default function SalesPage() {
                   </div>
                 ) : (
                   <div className="grid gap-3">
-                    {filteredProducts.map((product) => (
+                    {paginatedProducts.map((product) => (
                       <div
                         key={product.id}
                         role="button"
@@ -373,6 +396,49 @@ export default function SalesPage() {
                         </Button>
                       </div>
                     ))}
+                    {filteredProducts.length > PAGE_SIZE && (
+                      <div className="mt-2 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-100 bg-white/80 px-4 py-3">
+                        <p className="text-sm text-emerald-700">
+                          Showing {(currentPage - 1) * PAGE_SIZE + 1}-{Math.min(currentPage * PAGE_SIZE, filteredProducts.length)} of{" "}
+                          {filteredProducts.length}
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            className="border-emerald-200 hover:bg-emerald-50"
+                            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                            disabled={currentPage === 1}
+                          >
+                            Previous
+                          </Button>
+                          {Array.from({ length: totalPages }, (_, index) => {
+                            const page = index + 1
+                            return (
+                              <Button
+                                key={page}
+                                variant={currentPage === page ? "default" : "outline"}
+                                className={
+                                  currentPage === page
+                                    ? "bg-emerald-600 hover:bg-emerald-700"
+                                    : "border-emerald-200 hover:bg-emerald-50"
+                                }
+                                onClick={() => setCurrentPage(page)}
+                              >
+                                {page}
+                              </Button>
+                            )
+                          })}
+                          <Button
+                            variant="outline"
+                            className="border-emerald-200 hover:bg-emerald-50"
+                            onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                            disabled={currentPage === totalPages}
+                          >
+                            Next
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </CardContent>

@@ -17,20 +17,28 @@ export async function middleware(request: NextRequest) {
   const sessionCookie = request.cookies.get(getSessionCookieName())?.value
   let isAuthenticated = false
   let isAdmin = false
+  let isBusinessAdminPanel = false
+  let ownerAdminMustReset = false
 
   if (sessionCookie) {
     try {
       const { payload } = await jwtVerify(sessionCookie, getJwtSecret())
       isAuthenticated = true
       isAdmin = payload.isAdmin === true
+      isBusinessAdminPanel = payload.isBusinessAdminPanel === true
+      ownerAdminMustReset = payload.ownerAdminMustReset === true
     } catch {
       isAuthenticated = false
       isAdmin = false
+      isBusinessAdminPanel = false
+      ownerAdminMustReset = false
     }
   }
 
   const pathname = request.nextUrl.pathname
   const isAdminLoginRoute = pathname === "/admin/login"
+  const isBusinessAdminLoginRoute = pathname === "/business-admin/login"
+  const isBusinessAdminResetRoute = pathname === "/business-admin/reset-password"
   const isProtectedRoute =
     pathname.startsWith("/dashboard") ||
     pathname.startsWith("/products") ||
@@ -38,19 +46,36 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/settings") ||
     pathname.startsWith("/profile")
   const isAdminRoute = pathname.startsWith("/admin") && !isAdminLoginRoute
+  const isBusinessAdminRoute = pathname.startsWith("/business-admin") && !isBusinessAdminLoginRoute && !isBusinessAdminResetRoute
 
   // If the user is not logged in and trying to access protected routes, redirect to login
-  if (!isAuthenticated && (isProtectedRoute || isAdminRoute)) {
-    return NextResponse.redirect(new URL(isAdminRoute ? "/admin/login" : "/login", request.url))
+  if (!isAuthenticated && (isProtectedRoute || isAdminRoute || isBusinessAdminRoute)) {
+    return NextResponse.redirect(
+      new URL(isAdminRoute ? "/admin/login" : isBusinessAdminRoute ? "/business-admin/login" : "/login", request.url),
+    )
+  }
+
+  // Force password reset for business-admin accounts on first login (or when re-issued).
+  if (isAuthenticated && isBusinessAdminPanel && ownerAdminMustReset && pathname.startsWith("/business-admin") && !isBusinessAdminResetRoute) {
+    return NextResponse.redirect(new URL("/business-admin/reset-password", request.url))
   }
   if (isAdminLoginRoute && isAuthenticated && isAdmin) {
     return NextResponse.redirect(new URL("/admin", request.url))
   }
+  if (isBusinessAdminLoginRoute && isAuthenticated && isBusinessAdminPanel) {
+    return NextResponse.redirect(new URL("/business-admin", request.url))
+  }
   if (isProtectedRoute && isAdmin) {
     return NextResponse.redirect(new URL("/admin", request.url))
   }
+  if (isProtectedRoute && isBusinessAdminPanel) {
+    return NextResponse.redirect(new URL("/business-admin", request.url))
+  }
   if (isAdminRoute && !isAdmin) {
-    return NextResponse.redirect(new URL("/dashboard", request.url))
+    return NextResponse.redirect(new URL(isBusinessAdminPanel ? "/business-admin" : "/dashboard", request.url))
+  }
+  if (isBusinessAdminRoute && !isBusinessAdminPanel) {
+    return NextResponse.redirect(new URL(isAdmin ? "/admin" : "/dashboard", request.url))
   }
 
   return NextResponse.next()
@@ -68,5 +93,6 @@ export const config = {
     "/settings/:path*",
     "/profile/:path*",
     "/admin/:path*",
+    "/business-admin/:path*",
   ],
 }

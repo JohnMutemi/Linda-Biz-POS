@@ -188,6 +188,10 @@ export async function POST(request: Request) {
             ${existingId}
           )
         `
+        await sql`
+          INSERT INTO business_activity_logs (user_id, action, entity_type, entity_id, note)
+          VALUES (${userId}, ${"product_edited"}, ${"product"}, ${existingId}, ${"Merged quantity into existing product."})
+        `
         await sql`COMMIT`
         await notifyOwnerProductChange({
           request,
@@ -251,6 +255,10 @@ export async function POST(request: Request) {
           ${"product"},
           ${id}
         )
+      `
+      await sql`
+        INSERT INTO business_activity_logs (user_id, action, entity_type, entity_id, note)
+        VALUES (${userId}, ${"product_created"}, ${"product"}, ${id}, ${"Created new product."})
       `
       await sql`COMMIT`
     } catch (error) {
@@ -354,31 +362,33 @@ export async function PUT(request: Request) {
         WHERE id = ${id} AND user_id = ${userId}
       `
 
-      if (qtyDelta !== 0) {
-        const reason = qtyDelta > 0 ? "restock" : "adjustment"
-        await sql`
-          INSERT INTO inventory_movements (
-            user_id,
-            product_id,
-            reason,
-            quantity_change,
-            before_quantity,
-            after_quantity,
-            reference_type,
-            reference_id
-          )
-          VALUES (
-            ${userId},
-            ${id},
-            ${reason},
-            ${qtyDelta},
-            ${beforeQty},
-            ${nextQty},
-            ${"product"},
-            ${id}
-          )
-        `
-      }
+      const reason = qtyDelta === 0 ? "update" : qtyDelta > 0 ? "restock" : "adjustment"
+      await sql`
+        INSERT INTO inventory_movements (
+          user_id,
+          product_id,
+          reason,
+          quantity_change,
+          before_quantity,
+          after_quantity,
+          reference_type,
+          reference_id
+        )
+        VALUES (
+          ${userId},
+          ${id},
+          ${reason},
+          ${qtyDelta},
+          ${beforeQty},
+          ${nextQty},
+          ${"product"},
+          ${id}
+        )
+      `
+      await sql`
+        INSERT INTO business_activity_logs (user_id, action, entity_type, entity_id, note)
+        VALUES (${userId}, ${"product_edited"}, ${"product"}, ${id}, ${"Updated product details."})
+      `
 
       await sql`COMMIT`
       await notifyOwnerProductChange({
@@ -433,6 +443,12 @@ export async function DELETE(request: Request) {
       WHERE id = ${id} AND user_id = ${userId}
       LIMIT 1
     `
+    if (beforeRows.length > 0) {
+      await sql`
+        INSERT INTO business_activity_logs (user_id, action, entity_type, entity_id, note)
+        VALUES (${userId}, ${"product_deleted"}, ${"product"}, ${id}, ${"Deleted product from inventory."})
+      `
+    }
     await sql`DELETE FROM products WHERE id = ${id} AND user_id = ${userId}`
     const before =
       beforeRows.length > 0

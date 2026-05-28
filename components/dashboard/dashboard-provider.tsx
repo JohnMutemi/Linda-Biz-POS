@@ -15,6 +15,7 @@ export interface User {
   userType: UserType
   approvalStatus?: "pending" | "approved" | "rejected"
   isAdmin?: boolean
+  isBusinessAdminPanel?: boolean
   businessName: string
   phone?: string
   location?: string
@@ -43,10 +44,12 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     const loadUser = async () => {
       try {
         const isAdminLoginRoute = pathname === "/admin/login"
+        const isBusinessAdminLoginRoute = pathname === "/business-admin/login"
         // Only check for user authentication on protected routes.
         // Keep /admin/login public so admins can sign in.
-        const protectedRoutes = ["/dashboard", "/products", "/sales", "/settings", "/profile", "/admin"]
-        const isProtectedRoute = !isAdminLoginRoute && protectedRoutes.some((route) => pathname.startsWith(route))
+        const protectedRoutes = ["/dashboard", "/products", "/sales", "/settings", "/profile", "/admin", "/business-admin"]
+        const isProtectedRoute =
+          !isAdminLoginRoute && !isBusinessAdminLoginRoute && protectedRoutes.some((route) => pathname.startsWith(route))
 
         if (!isProtectedRoute) {
           setLoading(false)
@@ -68,8 +71,10 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
       } catch (error) {
         console.error("Error loading user data:", error)
         const isAdminLoginRoute = pathname === "/admin/login"
-        const protectedRoutes = ["/dashboard", "/products", "/sales", "/settings", "/profile", "/admin"]
-        const isProtectedRoute = !isAdminLoginRoute && protectedRoutes.some((route) => pathname.startsWith(route))
+        const isBusinessAdminLoginRoute = pathname === "/business-admin/login"
+        const protectedRoutes = ["/dashboard", "/products", "/sales", "/settings", "/profile", "/admin", "/business-admin"]
+        const isProtectedRoute =
+          !isAdminLoginRoute && !isBusinessAdminLoginRoute && protectedRoutes.some((route) => pathname.startsWith(route))
         if (isProtectedRoute) {
           router.push("/")
         }

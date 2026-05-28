@@ -385,7 +385,7 @@ export default function Dashboard() {
                 </Button>
                 <Button
                   variant="outline"
-                  className="flex min-h-[5.5rem] flex-col items-center justify-center gap-2 border-emerald-200 py-4 touch-manipulation hover:bg-emerald-50 relative z-10 sm:col-span-2 md:col-span-1 md:h-24"
+                  className="flex min-h-[5.5rem] flex-col items-center justify-center gap-2 border-emerald-200 py-4 touch-manipulation hover:bg-emerald-50 relative z-10 md:h-24"
                   onClick={() => router.push("/products")}
                 >
                   <Package className="h-6 w-6" />

@@ -6,6 +6,23 @@ type LoginRouteEmailInput = {
   loginUrl: string
 }
 
+type ApprovedAccessEmailInput = {
+  to: string
+  recipientName: string
+  userLoginUrl: string
+  ownerAdminLoginUrl: string
+  ownerAdminEmail: string
+  ownerAdminPassword: string
+}
+
+type BusinessAdminCredentialsEmailInput = {
+  to: string
+  recipientName: string
+  ownerAdminLoginUrl: string
+  ownerAdminEmail: string
+  ownerAdminPassword: string
+}
+
 type PasswordResetEmailInput = {
   to: string
   recipientName: string
@@ -81,6 +98,12 @@ export function buildPasswordResetUrl(token: string, email: string, fallbackOrig
   return `${baseUrl}/reset-password?${params.toString()}`
 }
 
+export function buildOwnerAdminLoginUrl(email: string, fallbackOrigin?: string) {
+  const baseUrl = getBaseUrl(fallbackOrigin).replace(/\/+$/, "")
+  const params = new URLSearchParams({ email })
+  return `${baseUrl}/business-admin/login?${params.toString()}`
+}
+
 export function buildSalesPageUrl(fallbackOrigin?: string) {
   const baseUrl = getBaseUrl(fallbackOrigin).replace(/\/+$/, "")
   return `${baseUrl}/sales`
@@ -130,6 +153,155 @@ export async function sendLoginRouteEmail({ to, recipientName, loginUrl }: Login
       </p>
       <p>If the button does not work, copy this URL:</p>
       <p><a href="${loginUrl}">${loginUrl}</a></p>
+    </div>
+  `
+
+  const transporter = nodemailer.createTransport({
+    host: smtpHost,
+    port: smtpPort,
+    secure: smtpSecure,
+    auth: {
+      user: smtpUser,
+      pass: smtpPass,
+    },
+  })
+
+  try {
+    await transporter.sendMail({
+      from: `${fromName} <${fromEmail}>`,
+      to,
+      subject,
+      html,
+    })
+  } catch (error) {
+    return {
+      sent: false,
+      reason: error instanceof Error ? `SMTP send failed: ${error.message}` : "SMTP send failed.",
+    }
+  }
+
+  return { sent: true as const }
+}
+
+export async function sendApprovedAccessEmail({
+  to,
+  recipientName,
+  userLoginUrl,
+  ownerAdminLoginUrl,
+  ownerAdminEmail,
+  ownerAdminPassword,
+}: ApprovedAccessEmailInput) {
+  const smtpHost = process.env.SMTP_HOST
+  const smtpPort = Number(process.env.SMTP_PORT || "587")
+  const smtpSecure = String(process.env.SMTP_SECURE || "false").toLowerCase() === "true"
+  const smtpUser = process.env.SMTP_USER
+  const smtpPass = process.env.SMTP_PASS
+  const fromEmail = process.env.EMAIL_FROM_EMAIL || process.env.AUTH_FROM_EMAIL || smtpUser
+  const fromName = process.env.EMAIL_FROM_NAME || "LindaBiz Support"
+
+  if (!smtpHost || !smtpPort || !smtpUser || !smtpPass || !fromEmail) {
+    return {
+      sent: false,
+      reason: "SMTP provider not configured. Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, and EMAIL_FROM_EMAIL.",
+    }
+  }
+
+  const subject = "Your LindaBiz account is approved (user + business admin access)"
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 700px; margin: 0 auto; color: #0f172a;">
+      <h2 style="color: #065f46;">Hi ${recipientName},</h2>
+      <p>Your account has been approved by the LindaBiz superadmin team.</p>
+      <p>You now have <strong>two access points</strong>:</p>
+      <ol>
+        <li><strong>Main user dashboard</strong> (for regular day-to-day operations)</li>
+        <li><strong>Business admin panel</strong> (for owner-level visibility and controls)</li>
+      </ol>
+      <div style="margin: 18px 0; padding: 14px; border: 1px solid #d1fae5; border-radius: 10px; background: #ecfdf5;">
+        <p style="margin: 0 0 8px 0; font-weight: 700;">Business admin credentials</p>
+        <p style="margin: 0;"><strong>Email:</strong> ${ownerAdminEmail}</p>
+        <p style="margin: 0;"><strong>Temporary password:</strong> ${ownerAdminPassword}</p>
+      </div>
+      <p style="margin: 22px 0;">
+        <a href="${userLoginUrl}" style="background: #059669; color: #ffffff; padding: 12px 18px; border-radius: 8px; text-decoration: none; display: inline-block; margin-right: 8px;">
+          Open Main Login
+        </a>
+        <a href="${ownerAdminLoginUrl}" style="background: #0f172a; color: #ffffff; padding: 12px 18px; border-radius: 8px; text-decoration: none; display: inline-block;">
+          Open Business Admin Login
+        </a>
+      </p>
+      <p>If buttons do not work, copy these links:</p>
+      <p>User login: <a href="${userLoginUrl}">${userLoginUrl}</a></p>
+      <p>Business admin login: <a href="${ownerAdminLoginUrl}">${ownerAdminLoginUrl}</a></p>
+    </div>
+  `
+
+  const transporter = nodemailer.createTransport({
+    host: smtpHost,
+    port: smtpPort,
+    secure: smtpSecure,
+    auth: {
+      user: smtpUser,
+      pass: smtpPass,
+    },
+  })
+
+  try {
+    await transporter.sendMail({
+      from: `${fromName} <${fromEmail}>`,
+      to,
+      subject,
+      html,
+    })
+  } catch (error) {
+    return {
+      sent: false,
+      reason: error instanceof Error ? `SMTP send failed: ${error.message}` : "SMTP send failed.",
+    }
+  }
+
+  return { sent: true as const }
+}
+
+export async function sendBusinessAdminCredentialsEmail({
+  to,
+  recipientName,
+  ownerAdminLoginUrl,
+  ownerAdminEmail,
+  ownerAdminPassword,
+}: BusinessAdminCredentialsEmailInput) {
+  const smtpHost = process.env.SMTP_HOST
+  const smtpPort = Number(process.env.SMTP_PORT || "587")
+  const smtpSecure = String(process.env.SMTP_SECURE || "false").toLowerCase() === "true"
+  const smtpUser = process.env.SMTP_USER
+  const smtpPass = process.env.SMTP_PASS
+  const fromEmail = process.env.EMAIL_FROM_EMAIL || process.env.AUTH_FROM_EMAIL || smtpUser
+  const fromName = process.env.EMAIL_FROM_NAME || "LindaBiz Support"
+
+  if (!smtpHost || !smtpPort || !smtpUser || !smtpPass || !fromEmail) {
+    return {
+      sent: false,
+      reason: "SMTP provider not configured. Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, and EMAIL_FROM_EMAIL.",
+    }
+  }
+
+  const subject = "Your LindaBiz business admin credentials"
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 700px; margin: 0 auto; color: #0f172a;">
+      <h2 style="color: #065f46;">Hi ${recipientName},</h2>
+      <p>Your <strong>business admin</strong> access has been issued (or re-issued).</p>
+      <div style="margin: 18px 0; padding: 14px; border: 1px solid #d1fae5; border-radius: 10px; background: #ecfdf5;">
+        <p style="margin: 0 0 8px 0; font-weight: 700;">Business admin credentials</p>
+        <p style="margin: 0;"><strong>Email:</strong> ${ownerAdminEmail}</p>
+        <p style="margin: 0;"><strong>Temporary password:</strong> ${ownerAdminPassword}</p>
+      </div>
+      <p style="margin: 22px 0;">
+        <a href="${ownerAdminLoginUrl}" style="background: #0f172a; color: #ffffff; padding: 12px 18px; border-radius: 8px; text-decoration: none; display: inline-block;">
+          Open Business Admin Login
+        </a>
+      </p>
+      <p>For security, you will be asked to set a new password after you sign in.</p>
+      <p>If the button does not work, copy this link:</p>
+      <p><a href="${ownerAdminLoginUrl}">${ownerAdminLoginUrl}</a></p>
     </div>
   `
 

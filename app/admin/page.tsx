@@ -150,7 +150,10 @@ export default function AdminPage() {
     )
   }, [clients])
 
-  const runClientAction = async (clientId: string, action: "approve" | "reject" | "send-login-route") => {
+  const runClientAction = async (
+    clientId: string,
+    action: "approve" | "reject" | "send-login-route" | "send-business-admin-credentials",
+  ) => {
     try {
       setBusyClientId(clientId)
       const response = await fetch(`/api/admin/clients/${clientId}`, {
@@ -165,7 +168,7 @@ export default function AdminPage() {
 
       const description =
         data.emailSent === false && data.loginUrl
-          ? `${data.message} Share this link manually: ${data.loginUrl}`
+          ? `${data.message} Share user login: ${data.loginUrl}. Business admin email: ${data.ownerAdminEmail ?? "n/a"}, temp password: ${data.ownerAdminPassword ?? "n/a"}, login: ${data.ownerAdminLoginUrl ?? "n/a"}`
           : data.message || "Action completed."
 
       toast({
@@ -349,6 +352,16 @@ export default function AdminPage() {
                       >
                         <Mail className="mr-2 h-4 w-4" />
                         Send Login Route
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={isBusy || client.approvalStatus !== "approved"}
+                        onClick={() => void runClientAction(client.id, "send-business-admin-credentials")}
+                      >
+                        <Mail className="mr-2 h-4 w-4" />
+                        Resend Business Admin Login
                       </Button>
                       <Button
                         type="button"

@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -38,12 +38,14 @@ interface PopularItem {
 }
 
 export default function ProductsPage() {
+  const PAGE_SIZE = 5
   const [products, setProducts] = useState<Product[]>([])
   const [user, setUser] = useState<any>(null)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [showPopularItems, setShowPopularItems] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
+  const [currentPage, setCurrentPage] = useState(1)
   const [formData, setFormData] = useState({
     name: "",
     price: "",
@@ -392,6 +394,22 @@ export default function ProductsPage() {
       product.unit.toLowerCase().includes(query)
     )
   })
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE))
+  const paginatedProducts = useMemo(() => {
+    const safePage = Math.min(currentPage, totalPages)
+    const start = (safePage - 1) * PAGE_SIZE
+    return filteredProducts.slice(start, start + PAGE_SIZE)
+  }, [currentPage, filteredProducts, totalPages])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm])
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages)
+    }
+  }, [currentPage, totalPages])
 
   if (!user) {
     return (
@@ -462,7 +480,7 @@ export default function ProductsPage() {
                   />
                 </div>
                 <Badge variant="outline" className="w-fit border-emerald-200 bg-emerald-50 text-emerald-700">
-                  {filteredProducts.length} / {products.length} shown
+                  {filteredProducts.length} filtered • page {currentPage} of {totalPages}
                 </Badge>
               </div>
             </CardContent>
@@ -529,7 +547,7 @@ export default function ProductsPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {filteredProducts.map((product, rowIdx) => {
+                        {paginatedProducts.map((product, rowIdx) => {
                           const rl = reorderThreshold(product)
                           const status =
                             isOutOfStock(product) ? "out" : isLowStock(product) ? "low" : "ok"
@@ -601,6 +619,49 @@ export default function ProductsPage() {
                   </div>
                 </CardContent>
               </Card>
+              {filteredProducts.length > PAGE_SIZE && (
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-100 bg-white/80 px-4 py-3">
+                  <p className="text-sm text-emerald-700">
+                    Showing {(currentPage - 1) * PAGE_SIZE + 1}-{Math.min(currentPage * PAGE_SIZE, filteredProducts.length)} of{" "}
+                    {filteredProducts.length}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      className="border-emerald-200 hover:bg-emerald-50"
+                      onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      Previous
+                    </Button>
+                    {Array.from({ length: totalPages }, (_, index) => {
+                      const page = index + 1
+                      return (
+                        <Button
+                          key={page}
+                          variant={currentPage === page ? "default" : "outline"}
+                          className={
+                            currentPage === page
+                              ? "bg-emerald-600 hover:bg-emerald-700"
+                              : "border-emerald-200 hover:bg-emerald-50"
+                          }
+                          onClick={() => setCurrentPage(page)}
+                        >
+                          {page}
+                        </Button>
+                      )
+                    })}
+                    <Button
+                      variant="outline"
+                      className="border-emerald-200 hover:bg-emerald-50"
+                      onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                      disabled={currentPage === totalPages}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
               {filteredProducts.length === 0 && (
                 <Card className="bg-white/80 backdrop-blur-sm border-emerald-100">
                   <CardContent className="py-10 text-center text-emerald-700">
