@@ -1,0 +1,133 @@
+/**
+ * Business owner admin — Ocean Blue & Teal (total scope).
+ * Overrides global emerald --primary from app/globals.css.
+ */
+
+[data-owner-admin-root] {
+  --oa-navy: 15 23 42;
+  --oa-blue: 37 99 235;
+  --oa-blue-dark: 30 64 175;
+  --oa-teal: 13 148 136;
+  --oa-teal-dark: 15 118 110;
+  --oa-ice: 240 249 255;
+  --oa-panel: 241 245 249;
+  --oa-border: 186 230 253;
+
+  --primary: 221 83% 53%;
+  --primary-foreground: 0 0% 100%;
+  --ring: 221 83% 53%;
+  --accent: 204 100% 97%;
+  --accent-foreground: 222 47% 11%;
+  --secondary: 214 32% 91%;
+  --secondary-foreground: 222 47% 11%;
+  --sidebar-primary: 221 83% 53%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --chart-1: 221 83% 53%;
+}
+
+[data-owner-admin-root] .bg-primary {
+  background-color: #2563eb !important;
+}
+[data-owner-admin-root] .text-primary {
+  color: #2563eb !important;
+}
+[data-owner-admin-root] .hover\:bg-primary\/90:hover,
+[data-owner-admin-root] .hover\:bg-primary\/80:hover {
+  background-color: #1d4ed8 !important;
+}
+
+/* Logo — kill emerald frame from shared LindaBizLogo if ever used */
+[data-owner-admin-root] .owner-admin-logo,
+[data-owner-admin-root] .owner-admin-logo-wrap {
+  border-color: rgb(var(--oa-border) / 0.9) !important;
+  background: linear-gradient(to bottom right, rgb(var(--oa-navy)), rgb(var(--oa-blue-dark)), rgb(var(--oa-navy))) !important;
+  box-shadow: 0 4px 12px -2px rgb(var(--oa-blue) / 0.35) !important;
+}
+
+[data-owner-admin-root] .owner-admin-page-bg {
+  background: linear-gradient(to bottom right, rgb(var(--oa-ice)), rgb(248 250 252), rgb(236 254 255)) !important;
+}
+
+[data-owner-admin-root] .owner-admin-sidebar {
+  background-color: rgb(255 255 255) !important;
+  border-color: rgb(var(--oa-border) / 0.8) !important;
+}
+
+[data-owner-admin-root] .owner-admin-sidebar-brand {
+  background: linear-gradient(to bottom right, rgb(var(--oa-ice) / 0.9), rgb(255 255 255)) !important;
+}
+
+[data-owner-admin-root] .owner-admin-nav-active,
+[data-owner-admin-root] .owner-admin-rail-active {
+  background-color: #2563eb !important;
+  border-color: #1d4ed8 !important;
+  color: rgb(255 255 255) !important;
+}
+
+/* Inactive nav icons — navy/teal-blue, not global emerald primary */
+[data-owner-admin-root] .owner-admin-sidebar a:not(.owner-admin-nav-active) svg,
+[data-owner-admin-root] .owner-admin-sidebar .group:not(.owner-admin-nav-active) svg {
+  color: rgb(30 58 138) !important;
+}
+
+[data-owner-admin-root] .owner-admin-badge-pill,
+[data-owner-admin-root] .owner-admin-badge-ready {
+  background-color: rgb(204 251 241) !important;
+  color: rgb(var(--oa-navy)) !important;
+}
+
+[data-owner-admin-root] .owner-admin-badge-today {
+  background-color: rgb(var(--oa-teal)) !important;
+  color: rgb(255 255 255) !important;
+}
+
+[data-owner-admin-panel] .owner-admin-hero {
+  background: linear-gradient(to right, rgb(var(--oa-blue)), rgb(var(--oa-blue-dark)), rgb(var(--oa-navy))) !important;
+  color: rgb(255 255 255) !important;
+}
+
+[data-owner-admin-panel] .owner-admin-hero h1,
+[data-owner-admin-panel] .owner-admin-hero p {
+  color: inherit;
+}
+
+[data-owner-admin-panel] .owner-admin-hero .text-sky-100 {
+  color: rgb(224 242 254) !important;
+}
+
+[data-owner-admin-panel] .owner-admin-main-panel {
+  background-color: rgb(var(--oa-panel) / 0.55) !important;
+  border-color: rgb(var(--oa-border) / 0.8) !important;
+}
+
+[data-owner-admin-panel] .owner-admin-tab-rail {
+  border-color: rgb(var(--oa-border) / 0.8) !important;
+  background: linear-gradient(to bottom, rgb(255 255 255), rgb(var(--oa-ice) / 0.35)) !important;
+}
+
+[data-owner-admin-panel] .owner-admin-card {
+  background-color: rgb(255 255 255) !important;
+  border-color: rgb(var(--oa-border) / 0.9) !important;
+}
+
+[data-owner-admin-panel] .owner-admin-tabs-trigger[data-state="active"] {
+  background-color: #2563eb !important;
+  color: rgb(255 255 255) !important;
+  box-shadow: 0 4px 6px -1px rgb(37 99 235 / 0.35) !important;
+}
+
+[data-owner-admin-panel] .owner-admin-tabs-list {
+  background-color: rgb(255 255 255) !important;
+  border-color: rgb(var(--oa-border) / 0.9) !important;
+}
+
+[data-owner-admin-panel] .owner-admin-tabs-trigger:hover:not([data-state="active"]) {
+  background-color: rgb(var(--oa-ice)) !important;
+}
+
+[data-owner-admin-root] .owner-admin-badge-ready,
+[data-owner-admin-panel] .owner-admin-badge-ready {
+  background-color: rgb(204 251 241) !important;
+  color: rgb(var(--oa-navy)) !important;
+  border-color: transparent !important;
+}

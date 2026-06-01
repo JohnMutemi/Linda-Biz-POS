@@ -3,15 +3,28 @@ import { db } from "@/lib/database"
 import { getSessionTokenFromCookieHeader, verifySessionToken } from "@/lib/auth"
 import { buildProductsPageUrl, sendProductChangeEmail } from "@/lib/mailer"
 
-async function getAuthenticatedUserId(request: Request) {
+async function getAuthenticatedSession(request: Request) {
   const token = getSessionTokenFromCookieHeader(request.headers.get("cookie"))
   if (!token) return null
   try {
     const session = await verifySessionToken(token)
-    return session.userId
+    return session
   } catch {
     return null
   }
+}
+
+function requireInventoryManager(session: Awaited<ReturnType<typeof getAuthenticatedSession>>) {
+  if (!session) return { error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) }
+  if (!session.isBusinessAdminPanel) {
+    return {
+      error: NextResponse.json(
+        { error: "Only the business owner can add, edit, or delete products. Sellers can view stock and record sales." },
+        { status: 403 },
+      ),
+    }
+  }
+  return { session }
 }
 
 async function notifyOwnerProductChange(args: {
@@ -71,15 +84,15 @@ async function notifyOwnerProductChange(args: {
 
 export async function GET(request: Request) {
   try {
-    const authenticatedUserId = await getAuthenticatedUserId(request)
-    if (!authenticatedUserId) {
+    const session = await getAuthenticatedSession(request)
+    if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get("userId")
 
-    if (!userId || userId !== authenticatedUserId) {
+    if (!userId || userId !== session.userId) {
       return NextResponse.json({ error: "userId is required" }, { status: 400 })
     }
 
@@ -113,10 +126,9 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const authenticatedUserId = await getAuthenticatedUserId(request)
-    if (!authenticatedUserId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+    const auth = requireInventoryManager(await getAuthenticatedSession(request))
+    if (auth.error) return auth.error
+    const session = auth.session
 
     const body = await request.json()
     const { id, name, price, quantity, unit, category, description, reorderLevel, userType, userId } = body
@@ -130,7 +142,7 @@ export async function POST(request: Request) {
     if (!Number.isFinite(Number(quantity)) || Number(quantity) < 0) {
       return NextResponse.json({ error: "Invalid quantity" }, { status: 400 })
     }
-    if (userId !== authenticatedUserId) {
+    if (userId !== session.userId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
@@ -289,10 +301,9 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
   try {
-    const authenticatedUserId = await getAuthenticatedUserId(request)
-    if (!authenticatedUserId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+    const auth = requireInventoryManager(await getAuthenticatedSession(request))
+    if (auth.error) return auth.error
+    const session = auth.session
 
     const body = await request.json()
     const { id, name, price, quantity, unit, category, description, reorderLevel, userType, userId } = body
@@ -306,7 +317,7 @@ export async function PUT(request: Request) {
     if (quantity != null && (!Number.isFinite(Number(quantity)) || Number(quantity) < 0)) {
       return NextResponse.json({ error: "Invalid quantity" }, { status: 400 })
     }
-    if (userId !== authenticatedUserId) {
+    if (userId !== session.userId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
@@ -420,10 +431,9 @@ export async function PUT(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    const authenticatedUserId = await getAuthenticatedUserId(request)
-    if (!authenticatedUserId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+    const auth = requireInventoryManager(await getAuthenticatedSession(request))
+    if (auth.error) return auth.error
+    const session = auth.session
 
     const { searchParams } = new URL(request.url)
     const id = searchParams.get("id")
@@ -432,7 +442,7 @@ export async function DELETE(request: Request) {
     if (!id || !userId) {
       return NextResponse.json({ error: "id and userId are required" }, { status: 400 })
     }
-    if (userId !== authenticatedUserId) {
+    if (userId !== session.userId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 

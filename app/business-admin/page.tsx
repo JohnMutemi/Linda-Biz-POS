@@ -5,7 +5,7 @@ export default function BusinessAdminPage() {
   return (
     <Suspense
       fallback={
-        <div className="relative z-20 mx-auto w-full max-w-7xl safe-pad-x py-10 text-center text-sm text-emerald-800">
+        <div className="relative z-20 mx-auto w-full max-w-7xl safe-pad-x py-10 text-center text-sm text-slate-700">
           Loading dashboard…
         </div>
       }

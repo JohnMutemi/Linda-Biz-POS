@@ -1,5 +1,8 @@
 "use client"
 
+import "../owner-admin-theme.css"
+import "../owner-admin-surface.css"
+
 import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -7,6 +10,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
+import { businessAdminTheme as t } from "@/lib/business-admin-theme"
+import { cn } from "@/lib/utils"
 
 export default function BusinessAdminResetPasswordPage() {
   const router = useRouter()
@@ -47,12 +52,12 @@ export default function BusinessAdminResetPasswordPage() {
   }
 
   return (
-    <div className="relative min-h-screen bg-emerald-50 px-4 py-10">
+    <div data-owner-admin-root className={cn("relative min-h-screen px-4 py-10", t.pageBg)}>
       <div className="mx-auto flex w-full max-w-[720px] items-center justify-center">
-        <Card className="w-full border-emerald-100 bg-white/90 shadow-2xl shadow-emerald-200/40 backdrop-blur-sm">
+        <Card className={cn("w-full shadow-2xl shadow-sky-200/40 backdrop-blur-sm", t.card)}>
           <CardHeader>
-            <CardTitle className="text-center text-2xl text-emerald-900">Set a new business admin password</CardTitle>
-            <CardDescription className="text-center text-emerald-700">
+            <CardTitle className={cn("text-center text-2xl", t.textPrimary)}>Set a new business admin password</CardTitle>
+            <CardDescription className={cn("text-center", t.textSecondary)}>
               For security, you must change the temporary password before continuing.
             </CardDescription>
           </CardHeader>
@@ -68,7 +73,7 @@ export default function BusinessAdminResetPasswordPage() {
                   minLength={6}
                   required
                 />
-                <p className="text-xs text-emerald-600">Must be at least 6 characters.</p>
+                <p className={cn("text-xs", t.textAccent)}>Must be at least 6 characters.</p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="ba-confirm-password">Confirm new password</Label>
@@ -81,7 +86,7 @@ export default function BusinessAdminResetPasswordPage() {
                   required
                 />
               </div>
-              <Button type="submit" disabled={!canSubmit} className="w-full bg-emerald-600 hover:bg-emerald-700">
+              <Button type="submit" disabled={!canSubmit} className={cn("w-full text-white", t.primary)}>
                 {busy ? "Updating..." : "Update password"}
               </Button>
             </form>
@@ -91,4 +96,3 @@ export default function BusinessAdminResetPasswordPage() {
     </div>
   )
 }
-

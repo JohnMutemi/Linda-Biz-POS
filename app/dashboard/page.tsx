@@ -323,7 +323,7 @@ export default function Dashboard() {
                     className="w-full border-rose-200 text-rose-700 hover:bg-rose-100"
                     onClick={() => router.push("/products")}
                   >
-                    Restock now
+                    View stock
                   </Button>
                 </CardContent>
               </Card>
@@ -351,7 +351,7 @@ export default function Dashboard() {
                     className="w-full border-amber-200 text-amber-800 hover:bg-amber-100"
                     onClick={() => router.push("/products")}
                   >
-                    Review inventory
+                    View stock
                   </Button>
                 </CardContent>
               </Card>
@@ -367,17 +367,9 @@ export default function Dashboard() {
               <CardDescription className="text-emerald-700">Common tasks for your business</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 md:gap-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:gap-4">
                 <Button
                   className="relative z-10 flex min-h-[5.5rem] flex-col gap-2 py-4 touch-manipulation bg-emerald-600 hover:bg-emerald-700 md:h-24"
-                  onClick={() => router.push("/products")}
-                >
-                  <Plus className="h-6 w-6" />
-                  <span>Add Product</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  className="flex min-h-[5.5rem] flex-col items-center justify-center gap-2 border-emerald-200 py-4 touch-manipulation hover:bg-emerald-50 relative z-10 md:h-24"
                   onClick={() => router.push("/sales")}
                 >
                   <ShoppingCart className="h-6 w-6" />
@@ -389,7 +381,7 @@ export default function Dashboard() {
                   onClick={() => router.push("/products")}
                 >
                   <Package className="h-6 w-6" />
-                  <span>Manage Stock</span>
+                  <span>View Stock</span>
                 </Button>
               </div>
             </CardContent>
@@ -463,11 +455,11 @@ export default function Dashboard() {
           <Card className="bg-white/70 backdrop-blur-sm border-emerald-100">
             <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
-                <CardTitle className="text-emerald-900">Product Overview</CardTitle>
+                <CardTitle className="text-emerald-900">Stock overview</CardTitle>
                 <CardDescription className="text-emerald-700">
                   {products.length > 0
-                    ? `Showing ${Math.min(5, products.length)} of ${products.length} products`
-                    : "No products added yet"}
+                    ? `Showing ${Math.min(5, products.length)} of ${products.length} in stock`
+                    : "No products in inventory yet"}
                 </CardDescription>
               </div>
               <Button
@@ -484,16 +476,17 @@ export default function Dashboard() {
               {products.length === 0 ? (
                 <div className="text-center py-12">
                   <Package className="h-12 w-12 mx-auto mb-4 text-emerald-300" />
-                  <h3 className="text-lg font-medium text-emerald-900 mb-2">No products yet</h3>
+                  <h3 className="text-lg font-medium text-emerald-900 mb-2">No stock listed yet</h3>
                   <p className="text-emerald-700 max-w-md mx-auto mb-6">
-                    Start by adding your first product to begin managing your inventory and tracking sales.
+                    Your business owner adds products. Once stock is available, you can record sales here.
                   </p>
                   <Button
+                    variant="outline"
                     onClick={() => router.push("/products")}
-                    className="bg-emerald-600 hover:bg-emerald-700 relative z-10"
+                    className="border-emerald-200 hover:bg-emerald-50 relative z-10"
                   >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Your First Product
+                    <Package className="mr-2 h-4 w-4" />
+                    Open stock list
                   </Button>
                 </div>
               ) : (

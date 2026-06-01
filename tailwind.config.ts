@@ -8,7 +8,19 @@ const config: Config = {
     './pages/**/*.{js,ts,jsx,tsx,mdx}',
     './components/**/*.{js,ts,jsx,tsx,mdx}',
     './app/**/*.{js,ts,jsx,tsx,mdx}',
+    './lib/**/*.{js,ts,jsx,tsx}',
     '*.{js,ts,jsx,tsx,mdx}',
+  ],
+  safelist: [
+    'owner-admin-hero',
+    'owner-admin-page-bg',
+    'owner-admin-main-panel',
+    'owner-admin-tabs-list',
+    'owner-admin-tabs-trigger',
+    {
+      pattern:
+        /^(bg-gradient-to-(br|r)|from-(sky|blue|slate|cyan)-|via-(slate|blue)-|to-(slate|cyan)-|bg-teal-|text-teal-|border-sky-|shadow-teal-|ring-sky-|hover:bg-teal-|hover:bg-sky-)/,
+    },
   ],
   theme: {
     extend: {

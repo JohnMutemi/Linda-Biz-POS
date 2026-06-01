@@ -1,0 +1,148 @@
+/**
+ * Owner admin — hard ocean blue / teal (hex), wins over global emerald --primary.
+ * Scoped to business-admin shell only.
+ */
+
+[data-owner-admin-root] {
+  --oa-ocean: #2563eb;
+  --oa-ocean-dark: #1d4ed8;
+  --oa-ocean-light: #dbeafe;
+  --oa-label: #0369a1;
+  --oa-label-soft: #e0f2fe;
+  --oa-navy-text: #0f172a;
+  --oa-muted: #475569;
+  --oa-mist: #f0f9ff;
+  --oa-border: #bae6fd;
+
+  --primary: 221 83% 53%;
+  --primary-foreground: 0 0% 100%;
+  --ring: 221 83% 53%;
+  --accent: 214 100% 97%;
+  --accent-foreground: 222 47% 11%;
+}
+
+/* —— Tabs (main + inventory sub-tabs) —— */
+[data-owner-admin-panel] .owner-admin-tabs-trigger[data-state="active"] {
+  background-color: var(--oa-ocean) !important;
+  color: #fff !important;
+  box-shadow: 0 4px 14px -3px rgb(37 99 235 / 0.45) !important;
+}
+
+[data-owner-admin-panel] .owner-admin-tabs-trigger[data-state="inactive"],
+[data-owner-admin-panel] .owner-admin-tabs-trigger:not([data-state="active"]) {
+  color: var(--oa-navy-text);
+}
+
+[data-owner-admin-panel] .owner-admin-tabs-trigger:hover:not([data-state="active"]) {
+  background-color: var(--oa-mist) !important;
+}
+
+/* —— Sidebar active —— */
+[data-owner-admin-root] .owner-admin-nav-active,
+[data-owner-admin-root] .owner-admin-rail-active {
+  background-color: var(--oa-ocean) !important;
+  border-color: var(--oa-ocean-dark) !important;
+  color: #fff !important;
+  box-shadow: 0 4px 14px -3px rgb(37 99 235 / 0.35) !important;
+}
+
+[data-owner-admin-root] .owner-admin-sidebar a:not(.owner-admin-nav-active) svg {
+  color: var(--oa-label) !important;
+}
+
+/* —— Badges —— */
+[data-owner-admin-root] .owner-admin-badge-pill,
+[data-owner-admin-root] .owner-admin-badge-ready,
+[data-owner-admin-panel] .owner-admin-badge-ready {
+  background-color: var(--oa-ocean-light) !important;
+  color: var(--oa-navy-text) !important;
+  border-color: var(--oa-border) !important;
+}
+
+[data-owner-admin-root] .owner-admin-badge-today {
+  background-color: var(--oa-ocean) !important;
+  color: #fff !important;
+}
+
+/* —— Section labels —— */
+[data-owner-admin-panel] .owner-admin-eyebrow,
+[data-owner-admin-root] .oa-label-accent {
+  color: var(--oa-label) !important;
+}
+
+[data-owner-admin-root] .oa-rank-badge {
+  background-color: var(--oa-ocean) !important;
+}
+
+/* —— Buttons (inventory + portaled dialogs live outside root) —— */
+.oa-btn-primary,
+[data-owner-admin-root] .oa-btn-primary {
+  background-color: var(--oa-ocean) !important;
+  color: #fff !important;
+}
+
+.oa-btn-primary:hover,
+[data-owner-admin-root] .oa-btn-primary:hover {
+  background-color: var(--oa-ocean-dark) !important;
+}
+
+.oa-btn-outline,
+[data-owner-admin-root] .oa-btn-outline {
+  border-color: var(--oa-border) !important;
+  color: var(--oa-muted) !important;
+}
+
+.oa-btn-outline:hover,
+[data-owner-admin-root] .oa-btn-outline:hover {
+  background-color: var(--oa-mist) !important;
+  color: var(--oa-navy-text) !important;
+}
+
+.oa-text-accent,
+[data-owner-admin-root] .oa-text-accent {
+  color: var(--oa-label) !important;
+}
+
+/* Catch stray Tailwind teal utilities (owner admin only — seller has no data-owner-admin-root) */
+[data-owner-admin-root] .text-teal-600,
+[data-owner-admin-root] .text-teal-700,
+[data-owner-admin-root] .text-teal-800 {
+  color: var(--oa-label) !important;
+}
+
+[data-owner-admin-root] .bg-teal-600,
+[data-owner-admin-root] .bg-teal-500 {
+  background-color: var(--oa-ocean) !important;
+}
+
+[data-owner-admin-root] .bg-teal-50,
+[data-owner-admin-root] .bg-teal-100 {
+  background-color: var(--oa-label-soft) !important;
+}
+
+[data-owner-admin-root] .border-teal-200,
+[data-owner-admin-root] .border-teal-500 {
+  border-color: var(--oa-border) !important;
+}
+
+/* Profile menu (portaled) */
+.owner-admin-profile-menu {
+  border-color: var(--oa-border) !important;
+  background-color: #fff !important;
+}
+
+.owner-admin-profile-menu [role="menuitem"]:focus {
+  background-color: #fff1f2 !important;
+  color: #be123c !important;
+}
+
+.oa-pagination-active,
+[data-owner-admin-root] .oa-pagination-active {
+  background-color: var(--oa-ocean) !important;
+  color: #fff !important;
+}
+
+.oa-pagination-active:hover,
+[data-owner-admin-root] .oa-pagination-active:hover {
+  background-color: var(--oa-ocean-dark) !important;
+}

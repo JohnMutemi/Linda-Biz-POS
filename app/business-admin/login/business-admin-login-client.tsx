@@ -1,5 +1,8 @@
 "use client"
 
+import "../owner-admin-theme.css"
+import "../owner-admin-surface.css"
+
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -9,6 +12,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/use-toast"
+import { businessAdminTheme as t } from "@/lib/business-admin-theme"
+import { cn } from "@/lib/utils"
 
 export function BusinessAdminLoginClient() {
   const [loading, setLoading] = useState(true)
@@ -76,18 +81,18 @@ export function BusinessAdminLoginClient() {
     }
   }
 
-  if (loading) return <div className="min-h-screen bg-emerald-50" />
+  if (loading) return <div className={cn("min-h-screen", t.pageBg)} />
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-green-50 to-teal-100 px-4 py-10">
+    <div data-owner-admin-root className={cn("min-h-screen px-4 py-10", t.pageBg)}>
       <div className="mx-auto max-w-md">
-        <Card className="border-emerald-100 shadow-xl shadow-emerald-100/40">
+        <Card className={cn(t.card, "shadow-xl shadow-sky-200/40")}>
           <CardHeader className="space-y-2 text-center">
-            <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+            <div className={cn("mx-auto", t.cardIcon)}>
               <ShieldCheck className="h-5 w-5" />
             </div>
-            <CardTitle className="text-2xl text-emerald-900">Business Admin Login</CardTitle>
-            <CardDescription className="text-emerald-700">Sign in with credentials sent after approval.</CardDescription>
+            <CardTitle className={cn("text-2xl", t.textPrimary)}>Business Admin Login</CardTitle>
+            <CardDescription className={t.textSecondary}>Sign in with credentials sent after approval.</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -105,12 +110,12 @@ export function BusinessAdminLoginClient() {
                   required
                 />
               </div>
-              <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700" disabled={submitting}>
+              <Button type="submit" className={cn("w-full text-white", t.primary)} disabled={submitting}>
                 {submitting ? "Signing in..." : "Sign in"}
               </Button>
             </form>
-            <div className="mt-4 text-center text-sm text-emerald-700">
-              <Link href="/login" className="font-medium hover:text-emerald-600">
+            <div className={cn("mt-4 text-center text-sm", t.textSecondary)}>
+              <Link href="/login" className={cn("font-medium hover:text-blue-800", t.textAccent)}>
                 Main user login
               </Link>
             </div>
@@ -120,4 +125,3 @@ export function BusinessAdminLoginClient() {
     </div>
   )
 }
-

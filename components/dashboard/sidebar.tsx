@@ -25,7 +25,7 @@ export function Sidebar() {
         current: pathname === "/dashboard",
       },
       {
-        name: "Products",
+        name: "Stock",
         href: "/products",
         icon: Package,
         current: pathname === "/products",

@@ -1,16 +1,33 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from "recharts"
 import { Activity, BarChart3, Boxes, CalendarRange, Download, Lightbulb, RefreshCw, Sparkles, Zap } from "lucide-react"
 import { isLowStock, isOutOfStock } from "@/lib/inventory-stock"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsContent } from "@/components/ui/tabs"
 import { useRouter, useSearchParams } from "next/navigation"
 import { cn } from "@/lib/utils"
+import { OwnerAdminInventoryPanel } from "@/components/business-admin/owner-admin-inventory-panel"
+import { businessAdminTheme as ba } from "@/lib/business-admin-theme"
+import { OwnerAdminTabIntro, OwnerAdminTabStrip } from "@/components/dashboard/owner-admin-tab-strip"
+
+const MAIN_TABS = [
+  { value: "overview", label: "Overview" },
+  { value: "inventory", label: "Inventory" },
+  { value: "actions", label: "Actions" },
+  { value: "tips", label: "Tips" },
+] as const
+
+const INVENTORY_SUB_TABS = [
+  { value: "manage", label: "Management", shortLabel: "Manage" },
+  { value: "fast-moving", label: "Fast moving", shortLabel: "Fast" },
+  { value: "stock-alerts", label: "Low & out of stock", shortLabel: "Alerts" },
+] as const
 
 type OverviewData = {
   period: { from: string; to: string }
@@ -65,8 +82,47 @@ export function BusinessAdminDashboardClient() {
   const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null)
   const [sellerProducts, setSellerProducts] = useState<SellerProduct[]>([])
 
-  const activeTab = ((searchParams.get("tab") || "overview").toLowerCase() as "overview" | "products" | "actions" | "tips") ?? "overview"
+  const tabParam = (searchParams.get("tab") || "overview").toLowerCase()
+  const activeTab = (
+    tabParam === "products" ? "inventory" : tabParam
+  ) as "overview" | "inventory" | "actions" | "tips"
   const stockFilter = ((searchParams.get("stock") || "all").toLowerCase() as "all" | "low" | "out") ?? "all"
+  const inventoryViewParam = (searchParams.get("view") || "manage").toLowerCase()
+  const inventoryView = (
+    inventoryViewParam === "fast-moving" || inventoryViewParam === "fast"
+      ? "fast-moving"
+      : inventoryViewParam === "stock-alerts" || inventoryViewParam === "stock" || inventoryViewParam === "alerts"
+        ? "stock-alerts"
+        : "manage"
+  ) as "manage" | "fast-moving" | "stock-alerts"
+
+  const adminCardClass = ba.card
+  const adminCardTitleClass = ba.cardTitle
+
+  const heroMeta = useMemo(
+    () =>
+      ({
+        overview: {
+          title: "Overview & Insights",
+          description:
+            "Track revenue trends, stock value, health score, and fast-moving products—then export reports for any date range.",
+        },
+        inventory: {
+          title: "Inventory",
+          description: "Manage products, review fast movers, and resolve low or out-of-stock items.",
+        },
+        actions: {
+          title: "Business actions",
+          description: "See product and inventory activity logged for this business.",
+        },
+        tips: {
+          title: "Business tips",
+          description: "System-generated recommendations based on your latest performance.",
+        },
+      }) as const,
+    [],
+  )
+  const hero = heroMeta[activeTab] ?? heroMeta.overview
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -100,6 +156,15 @@ export function BusinessAdminDashboardClient() {
   useEffect(() => {
     void refreshAll()
   }, [refreshAll])
+
+  useEffect(() => {
+    const onInventoryRefresh = () => {
+      void loadSellerProducts()
+      void loadData()
+    }
+    window.addEventListener("inventory-refresh", onInventoryRefresh)
+    return () => window.removeEventListener("inventory-refresh", onInventoryRefresh)
+  }, [loadSellerProducts, loadData])
 
   const todayIso = useMemo(() => localDateKey(new Date()), [])
   const today = useMemo(() => {
@@ -147,381 +212,602 @@ export function BusinessAdminDashboardClient() {
     return source.filter((item) => item.status === stockFilter)
   }, [stockAlerts, stockFilter])
 
-  const setTab = (tab: "overview" | "products" | "actions" | "tips") => {
+  const setTab = (tab: "overview" | "inventory" | "actions" | "tips") => {
     const params = new URLSearchParams(searchParams.toString())
     params.set("tab", tab)
+    if (tab === "inventory" && !params.get("view")) {
+      params.set("view", "manage")
+    }
+    if (tab !== "inventory") {
+      params.delete("view")
+      params.delete("stock")
+    }
+    router.replace(`/business-admin?${params.toString()}`)
+  }
+  const setInventoryView = (
+    view: "manage" | "fast-moving" | "stock-alerts",
+    stock?: "all" | "low" | "out",
+  ) => {
+    const params = new URLSearchParams(searchParams.toString())
+    params.set("tab", "inventory")
+    params.set("view", view)
+    if (view === "stock-alerts") {
+      params.set("stock", stock ?? stockFilter)
+    } else {
+      params.delete("stock")
+    }
     router.replace(`/business-admin?${params.toString()}`)
   }
   const setStockTab = (stock: "all" | "low" | "out") => {
-    const params = new URLSearchParams(searchParams.toString())
-    params.set("tab", "products")
-    params.set("stock", stock)
-    router.replace(`/business-admin?${params.toString()}`)
+    setInventoryView("stock-alerts", stock)
   }
 
+  const headerRef = useRef<HTMLElement>(null)
+  const [headerHeight, setHeaderHeight] = useState(0)
+
+  useLayoutEffect(() => {
+    const el = headerRef.current
+    if (!el) return
+
+    const updateHeight = () => {
+      setHeaderHeight(Math.ceil(el.getBoundingClientRect().height))
+    }
+
+    updateHeight()
+    const observer = new ResizeObserver(updateHeight)
+    observer.observe(el)
+    window.addEventListener("resize", updateHeight)
+
+    return () => {
+      observer.disconnect()
+      window.removeEventListener("resize", updateHeight)
+    }
+  }, [activeTab, hero.title, loading, lastUpdatedAt])
+
   return (
-    <div className="relative z-20 mx-auto w-full max-w-7xl safe-pad-x pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-4 sm:pb-10 sm:pt-6">
-      <Tabs value={activeTab} onValueChange={(v) => setTab(v as any)} className="space-y-6">
-        <div
-          className={cn(
-            "sticky z-50 space-y-3 pb-3",
-            "top-[calc(max(4rem,env(safe-area-inset-top))+3.25rem)] lg:top-0",
-            "bg-gradient-to-b from-emerald-50/98 via-green-50/95 to-teal-50/90 backdrop-blur-md",
-          )}
-        >
-          <div className="relative overflow-hidden rounded-2xl border border-white/50 bg-gradient-to-br from-emerald-600 via-teal-600 to-sky-600 p-5 text-white shadow-[0_18px_60px_-25px_rgba(2,132,199,0.7)] sm:p-7">
-            <div className="absolute inset-0 opacity-40">
-              <div className="absolute -left-24 -top-24 h-56 w-56 rounded-full bg-white/35 blur-3xl" />
-              <div className="absolute -right-24 -bottom-24 h-64 w-64 rounded-full bg-white/25 blur-3xl" />
+    <div className="relative z-20 mx-auto w-full max-w-7xl safe-pad-x pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-1 sm:pb-10 sm:pt-2 xl:max-w-[88rem] 2xl:max-w-[96rem]">
+      <header
+        ref={headerRef}
+        className={cn(
+          ba.headerBar,
+          "left-16 right-0",
+          "top-[calc(max(4rem,env(safe-area-inset-top))+4.25rem)]",
+          "lg:left-72 lg:top-0 xl:left-80",
+        )}
+      >
+        <div className="mx-auto w-full max-w-7xl space-y-2 px-3 pb-2 pt-1 safe-pad-x sm:px-4 sm:pt-2 lg:max-w-none lg:px-6 xl:max-w-[88rem] 2xl:max-w-[96rem]">
+          <div
+            className={cn(
+              "relative overflow-hidden rounded-xl border border-white/25 px-3 py-3 sm:rounded-2xl sm:px-4 sm:py-3.5 lg:px-5",
+              ba.headerGradient,
+              ba.headerShadow,
+              ba.textOnPrimary,
+            )}
+          >
+            <div className="absolute inset-0 pointer-events-none opacity-30">
+              <div className="absolute -left-16 -top-16 h-32 w-32 rounded-full bg-white/35 blur-2xl" />
+              <div className="absolute -right-12 -bottom-12 h-28 w-28 rounded-full bg-white/25 blur-2xl" />
             </div>
-            <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="min-w-0">
-                <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold tracking-wide">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  Owner Admin
+            <div className="relative flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+              <div className="min-w-0 flex-1 space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className={ba.badgePill}>
+                    <Sparkles className={ba.badgePillIcon} />
+                    Owner Admin
+                  </span>
+                  <h1 className="text-lg font-semibold tracking-tight sm:text-xl lg:text-2xl">{hero.title}</h1>
                 </div>
-                <h1 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">Overview & Insights</h1>
-                <p className="mt-1 max-w-2xl text-sm text-white/85">
-                  Track revenue trends, stock value, health score, and fast-moving products—then export reports for any date range.
-                </p>
+                <p className={cn("line-clamp-1 max-w-2xl text-xs sm:text-sm", ba.textOnHeroMuted)}>{hero.description}</p>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-1.5 sm:shrink-0 sm:justify-end">
                 <Button
                   type="button"
                   variant="secondary"
                   size="sm"
-                  className="bg-white/90 text-emerald-900 hover:bg-white"
+                  className={ba.btnHero}
                   disabled={loading}
                   onClick={() => void refreshAll()}
                 >
-                  <RefreshCw className={cn("mr-2 h-4 w-4", loading && "animate-spin")} />
-                  Refresh data
+                  <RefreshCw className={cn("mr-1.5 h-3.5 w-3.5", loading && "animate-spin")} />
+                  Refresh
                 </Button>
-                <Badge className={loading ? "bg-white/20 text-white" : "bg-emerald-100 text-emerald-900"}>
+                <Badge variant="outline" className={cn(loading ? ba.badgeHeroMeta : ba.badgeReady)}>
                   {loading ? "Updating…" : "Ready"}
                 </Badge>
                 {lastUpdatedAt ? (
-                  <Badge className="bg-white/15 text-white">Last updated: {lastUpdatedAt}</Badge>
+                  <Badge variant="outline" className={cn("hidden md:inline-flex", ba.badgeHeroMeta)}>
+                    {lastUpdatedAt}
+                  </Badge>
                 ) : null}
-                <Badge className="bg-white/15 text-white">
-                  <BarChart3 className="mr-1.5 inline h-3.5 w-3.5" />
-                  {data?.period?.from ?? from} → {data?.period?.to ?? to}
+                <Badge variant="outline" className={cn("max-w-[9.5rem] truncate sm:max-w-none", ba.badgeHeroMeta)}>
+                  <BarChart3 className="mr-1 inline h-3 w-3 shrink-0" />
+                  <span className="truncate">
+                    {data?.period?.from ?? from} → {data?.period?.to ?? to}
+                  </span>
                 </Badge>
               </div>
             </div>
           </div>
 
-          <TabsList className="h-auto w-full justify-start gap-1 overflow-x-auto rounded-2xl border border-emerald-100 bg-white/90 p-1 shadow-sm backdrop-blur-sm">
-              <TabsTrigger
-                value="overview"
-                className="rounded-xl px-4 py-2 text-sm font-semibold text-emerald-800 data-[state=active]:bg-emerald-600 data-[state=active]:text-white"
-              >
-                Overview
-              </TabsTrigger>
-              <TabsTrigger
-                value="products"
-                className="rounded-xl px-4 py-2 text-sm font-semibold text-emerald-800 data-[state=active]:bg-emerald-600 data-[state=active]:text-white"
-              >
-                Products
-              </TabsTrigger>
-              <TabsTrigger
-                value="actions"
-                className="rounded-xl px-4 py-2 text-sm font-semibold text-emerald-800 data-[state=active]:bg-emerald-600 data-[state=active]:text-white"
-              >
-                Actions
-              </TabsTrigger>
-              <TabsTrigger
-                value="tips"
-                className="rounded-xl px-4 py-2 text-sm font-semibold text-emerald-800 data-[state=active]:bg-emerald-600 data-[state=active]:text-white"
-              >
-                Tips
-              </TabsTrigger>
-            </TabsList>
         </div>
+      </header>
 
-        <div className="rounded-2xl border border-white/40 bg-white/55 shadow-[0_10px_35px_-20px_rgba(16,185,129,0.45)] ring-1 ring-emerald-100/60 backdrop-blur-xl sm:rounded-3xl">
-          <div className="space-y-6 p-3 sm:p-6 lg:p-8">
-          <TabsContent value="overview" className="mt-0 space-y-6">
-            <Card className="border-emerald-100 bg-white/70 backdrop-blur-sm">
-              <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <div className="min-w-0">
-                  <CardTitle className="flex items-center gap-2 text-emerald-950">
-                    <Zap className="h-5 w-5 text-emerald-700" />
-                    Today snapshot
-                  </CardTitle>
-                  <CardDescription className="text-emerald-700">A quick view of how today is going.</CardDescription>
-                </div>
-                <Badge className="w-fit bg-emerald-100 text-emerald-900">Today</Badge>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <TapKpiCard
-                    title="Today revenue"
-                    value={`KSh ${Math.round(today.revenue).toLocaleString()}`}
-                    sub={today.hasData ? `${today.salesCount} sale(s) today` : "No sales recorded today"}
-                    icon={<BarChart3 className="h-5 w-5" />}
-                    tone="emerald"
-                  />
-                  <TapKpiCard
-                    title="Stock attention"
-                    value={`${stockCounts.low} low • ${stockCounts.out} out`}
-                    sub="From seller inventory (same rules as Products page)"
-                    icon={<Activity className="h-5 w-5" />}
-                    tone={stockCounts.out > 0 ? "rose" : "sky"}
-                  />
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                  <button
-                    type="button"
-                    onClick={() => setStockTab("out")}
-                    className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-rose-700 hover:bg-rose-100"
-                  >
-                    View out-of-stock
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setStockTab("low")}
-                    className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-amber-700 hover:bg-amber-100"
-                  >
-                    View low-stock
-                  </button>
-                </div>
-              </CardContent>
-            </Card>
+      <div aria-hidden className="w-full" style={{ height: headerHeight > 0 ? headerHeight : 120 }} />
 
-            <Card className="border-emerald-100 bg-white/70 backdrop-blur-sm">
-              <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <div className="min-w-0">
-                  <CardTitle className="flex items-center gap-2 text-emerald-950">
-                    <CalendarRange className="h-5 w-5 text-emerald-700" />
-                    Reports Range
-                  </CardTitle>
-                  <CardDescription className="text-emerald-700">Daily by default, or set a custom range.</CardDescription>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="border-emerald-200 bg-white/60 hover:bg-emerald-50"
-                    onClick={() => {
-                      const params = new URLSearchParams({ from, to })
-                      window.location.href = `/api/business-admin/exports/sales/csv?${params.toString()}`
-                    }}
-                  >
-                    <Download className="mr-2 h-4 w-4" />
-                    Export CSV
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="border-emerald-200 bg-white/60 hover:bg-emerald-50"
-                    onClick={() => {
-                      const params = new URLSearchParams({ from, to })
-                      window.location.href = `/api/business-admin/exports/sales/pdf?${params.toString()}`
-                    }}
-                  >
-                    <Download className="mr-2 h-4 w-4" />
-                    Export PDF
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-end">
-                <div className="w-full sm:w-auto">
-                  <p className="mb-1 text-xs font-medium text-emerald-700">From</p>
-                  <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="bg-white/70" />
-                </div>
-                <div className="w-full sm:w-auto">
-                  <p className="mb-1 text-xs font-medium text-emerald-700">To</p>
-                  <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="bg-white/70" />
-                </div>
-                <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => void loadData()}>
-                  Apply Range
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="border-emerald-200 bg-white/60 hover:bg-emerald-50"
-                  disabled={loading}
-                  onClick={() => void refreshAll()}
-                >
-                  <RefreshCw className={cn("mr-2 h-4 w-4", loading && "animate-spin")} />
-                  Refresh
-                </Button>
-              </CardContent>
-            </Card>
-
-            <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <TapKpiCard
-                title="Range revenue"
-                value={`KSh ${Math.round(data?.metrics.revenue || 0).toLocaleString()}`}
-                sub="Selected date range"
-                icon={<BarChart3 className="h-5 w-5" />}
-                tone="emerald"
-              />
-              <TapKpiCard
-                title="Sales count"
-                value={`${data?.metrics.salesCount || 0}`}
-                sub="Transactions in range"
-                icon={<Activity className="h-5 w-5" />}
-                tone="sky"
-              />
-              <TapKpiCard
-                title="Stock value"
-                value={`KSh ${Math.round(data?.metrics.totalStockValue || 0).toLocaleString()}`}
-                sub="Inventory value estimate"
-                icon={<Boxes className="h-5 w-5" />}
-                tone="violet"
-              />
-              <TapKpiCard
-                title="Health score"
-                value={`${data?.metrics.overallHealthScore || 0}%`}
-                sub="System health indicator"
-                icon={<Sparkles className="h-5 w-5" />}
-                tone="amber"
-              />
+      <Tabs value={activeTab} onValueChange={(v) => setTab(v as "overview" | "inventory" | "actions" | "tips")} className="relative">
+        <div className={cn(ba.mainPanel, "overflow-hidden sm:rounded-3xl")}>
+          <div className={cn("owner-admin-tab-rail border-b px-3 py-3 sm:px-6 lg:px-10", ba.surfaceIce)}>
+            <OwnerAdminTabStrip tabs={[...MAIN_TABS]} variant="main" />
+          </div>
+          <div className="space-y-5 p-3 sm:space-y-6 sm:p-6 lg:space-y-8 lg:p-10 xl:p-12">
+          <TabsContent value="overview" className="mt-0 space-y-10 sm:space-y-12">
+            <div className={cn("flex flex-col gap-3 pb-8 sm:flex-row sm:items-end sm:justify-between", ba.sectionDivider)}>
+              <div className="space-y-1">
+                <p className={ba.sectionEyebrow}>Overview</p>
+                <h2 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">Business pulse</h2>
+                <p className={cn("max-w-2xl sm:text-base", ba.sectionDesc)}>
+                  Start with today&apos;s numbers, set your report range, then review performance and trends below.
+                </p>
+              </div>
+              <Badge variant="outline" className={cn("w-fit shrink-0 px-3 py-1.5", ba.badgeOutline)}>
+                <BarChart3 className="mr-1.5 h-3.5 w-3.5" />
+                {data?.period?.from ?? from} → {data?.period?.to ?? to}
+              </Badge>
             </div>
 
-            <Card className="border-emerald-100 bg-white/70 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-emerald-950">Revenue trend</CardTitle>
-                <CardDescription className="text-emerald-700">
-                  Daily revenue for the selected range. Red dots are anomalies (≥ 2σ from the mean, when there are at least 5 days of data).
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {!loading && !hasRangeData ? (
-                  <EmptyState
-                    title="No revenue data in this range"
-                    description="Try adjusting the date range, or make a few sales to start seeing trends."
-                    icon={<BarChart3 className="h-5 w-5" />}
-                  />
-                ) : (
-                  <div className="h-[260px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={data?.trends?.dailyRevenue || []}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#dbeafe" />
-                      <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                      <YAxis tick={{ fontSize: 12 }} />
-                      <Tooltip />
-                      <Line
-                        type="monotone"
-                        dataKey="revenue"
-                        stroke="#059669"
-                        strokeWidth={2}
-                        dot={(props: any) => {
-                          const anomaly = Boolean(props?.payload?.anomaly)
-                          const key = `${props?.payload?.date ?? ""}-${props?.cx ?? ""}-${props?.cy ?? ""}`
-                          return (
-                            <circle
-                              key={key}
-                              cx={props.cx}
-                              cy={props.cy}
-                              r={3.5}
-                              fill={anomaly ? "#ef4444" : "#059669"}
-                              stroke="#ffffff"
-                              strokeWidth={1.5}
-                            />
-                          )
+            <OverviewSection
+              title="Today"
+              description="Live snapshot of sales and stock that need attention right now."
+            >
+              <Card className={adminCardClass}>
+                <CardHeader className={cn("flex flex-row items-start justify-between gap-4 space-y-0 px-6 py-5 sm:px-8", ba.cardHeader)}>
+                  <div className="flex items-start gap-3">
+                    <span className={ba.cardIcon}>
+                      <Zap className="h-5 w-5" />
+                    </span>
+                    <div>
+                      <CardTitle className={cn("text-lg", adminCardTitleClass)}>Today snapshot</CardTitle>
+                      <CardDescription className={cn("mt-1", ba.textSecondary)}>How the business is performing today.</CardDescription>
+                    </div>
+                  </div>
+                  <Badge variant="outline" className={ba.badgeToday}>
+                    Today
+                  </Badge>
+                </CardHeader>
+                <CardContent className="space-y-8 px-6 py-8 sm:px-8">
+                  <div className="grid gap-5 sm:grid-cols-2 sm:gap-6">
+                    <OverviewMetric
+                      label="Today revenue"
+                      value={`KSh ${Math.round(today.revenue).toLocaleString()}`}
+                      hint={today.hasData ? `${today.salesCount} sale(s) today` : "No sales recorded today"}
+                      icon={<BarChart3 className="h-5 w-5" />}
+                      tone="blue"
+                    />
+                    <OverviewMetric
+                      label="Stock attention"
+                      value={`${stockCounts.low} low · ${stockCounts.out} out`}
+                      hint="Items at or below reorder level"
+                      icon={<Activity className="h-5 w-5" />}
+                      tone={stockCounts.out > 0 ? "rose" : "blue"}
+                    />
+                  </div>
+                  <div className={cn("flex flex-col gap-3 border-t pt-6 sm:flex-row sm:items-center sm:justify-between", ba.borderStrong)}>
+                    <p className={cn("text-sm", ba.textSecondary)}>Jump to inventory alerts</p>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className={ba.btnStockOut}
+                        onClick={() => setStockTab("out")}
+                      >
+                        Out of stock ({stockCounts.out})
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className={ba.btnStockLow}
+                        onClick={() => setStockTab("low")}
+                      >
+                        Low stock ({stockCounts.low})
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </OverviewSection>
+
+            <OverviewSection
+              title="Reports"
+              description="Choose a date range for charts and exports. Defaults to the last 7 days."
+            >
+              <Card className={adminCardClass}>
+                <CardHeader className={cn("space-y-4 px-6 py-5 sm:px-8", ba.cardHeader)}>
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="flex items-start gap-3">
+                      <span className={ba.cardIcon}>
+                        <CalendarRange className="h-5 w-5" />
+                      </span>
+                      <div>
+                        <CardTitle className={cn("text-lg", adminCardTitleClass)}>Reports range</CardTitle>
+                        <CardDescription className={cn("mt-1", ba.textSecondary)}>
+                          Applies to KPIs, revenue trend, and daily sales below.
+                        </CardDescription>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2 lg:justify-end">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className={ba.btnOutline}
+                        onClick={() => {
+                          const params = new URLSearchParams({ from, to })
+                          window.location.href = `/api/business-admin/exports/sales/csv?${params.toString()}`
                         }}
+                      >
+                        <Download className="mr-2 h-4 w-4" />
+                        Export CSV
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className={ba.btnOutline}
+                        onClick={() => {
+                          const params = new URLSearchParams({ from, to })
+                          window.location.href = `/api/business-admin/exports/sales/pdf?${params.toString()}`
+                        }}
+                      >
+                        <Download className="mr-2 h-4 w-4" />
+                        Export PDF
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="px-6 py-8 sm:px-8">
+                  <div className={cn("p-5 sm:p-6", ba.innerPanel)}>
+                    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto_auto] lg:items-end lg:gap-4">
+                      <div className="space-y-2">
+                        <Label className={ba.textPrimary}>From</Label>
+                        <Input
+                          type="date"
+                          value={from}
+                          onChange={(e) => setFrom(e.target.value)}
+                          className={cn("h-11", ba.input)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className={ba.textPrimary}>To</Label>
+                        <Input
+                          type="date"
+                          value={to}
+                          onChange={(e) => setTo(e.target.value)}
+                          className={cn("h-11", ba.input)}
+                        />
+                      </div>
+                      <Button
+                        className={cn("h-11 w-full lg:w-auto lg:min-w-[8.5rem]", ba.primary)}
+                        onClick={() => void loadData()}
+                      >
+                        Apply range
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className={cn("h-11 w-full lg:w-auto", ba.btnOutline)}
+                        disabled={loading}
+                        onClick={() => void refreshAll()}
+                      >
+                        <RefreshCw className={cn("mr-2 h-4 w-4", loading && "animate-spin")} />
+                        Refresh
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </OverviewSection>
+
+            <OverviewSection
+              title="Range performance"
+              description="Summary metrics for the dates selected above."
+            >
+              <div className="grid gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4 lg:gap-6">
+                <TapKpiCard
+                  title="Range revenue"
+                  value={`KSh ${Math.round(data?.metrics.revenue || 0).toLocaleString()}`}
+                  sub="Total in selected range"
+                  icon={<BarChart3 className="h-5 w-5" />}
+                  tone="blue"
+                />
+                <TapKpiCard
+                  title="Sales count"
+                  value={`${data?.metrics.salesCount || 0}`}
+                  sub="Transactions in range"
+                  icon={<Activity className="h-5 w-5" />}
+                  tone="blue"
+                />
+                <TapKpiCard
+                  title="Stock value"
+                  value={`KSh ${Math.round(data?.metrics.totalStockValue || 0).toLocaleString()}`}
+                  sub="Inventory value estimate"
+                  icon={<Boxes className="h-5 w-5" />}
+                  tone="navy"
+                />
+                <TapKpiCard
+                  title="Health score"
+                  value={`${data?.metrics.overallHealthScore || 0}%`}
+                  sub="Overall business health"
+                  icon={<Sparkles className="h-5 w-5" />}
+                  tone="cyan"
+                />
+              </div>
+            </OverviewSection>
+
+            <OverviewSection
+              title="Trends & daily sales"
+              description="Visual revenue trend followed by a day-by-day breakdown."
+            >
+              <div className="space-y-6 lg:space-y-8">
+                <Card className={adminCardClass}>
+                  <CardHeader className={cn("px-6 py-5 sm:px-8", ba.cardHeader)}>
+                    <CardTitle className={adminCardTitleClass}>Revenue trend</CardTitle>
+                    <CardDescription className={cn("mt-1.5 max-w-3xl", ba.textSecondary)}>
+                      Daily revenue for your selected range. Red markers flag unusual days when enough data exists.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="px-4 py-8 sm:px-8">
+                    {!loading && !hasRangeData ? (
+                      <EmptyState
+                        title="No revenue data in this range"
+                        description="Try adjusting the date range, or make a few sales to start seeing trends."
+                        icon={<BarChart3 className="h-5 w-5" />}
                       />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                    ) : (
+                      <div className="h-[240px] w-full min-w-0 sm:h-[300px] lg:h-[340px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={data?.trends?.dailyRevenue || []} margin={{ top: 16, right: 20, left: 8, bottom: 12 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke={ba.chartGrid} vertical={false} />
+                            <XAxis dataKey="date" tick={{ fontSize: 12 }} tickMargin={12} />
+                            <YAxis
+                              tick={{ fontSize: 12 }}
+                              width={64}
+                              tickFormatter={(v) =>
+                                Number(v) >= 1000 ? `KSh ${Math.round(Number(v) / 1000)}k` : `KSh ${v}`
+                              }
+                            />
+                            <Tooltip
+                              contentStyle={{
+                                borderRadius: "12px",
+                                border: `1px solid ${ba.chartTooltipBorder}`,
+                                boxShadow: "0 8px 24px rgba(13,148,136,0.15)",
+                              }}
+                            />
+                            <Line
+                              type="monotone"
+                              dataKey="revenue"
+                              stroke={ba.chartLine}
+                              strokeWidth={2.5}
+                              dot={(props: any) => {
+                                const anomaly = Boolean(props?.payload?.anomaly)
+                                const key = `${props?.payload?.date ?? ""}-${props?.cx ?? ""}-${props?.cy ?? ""}`
+                                return (
+                                  <circle
+                                    key={key}
+                                    cx={props.cx}
+                                    cy={props.cy}
+                                    r={4}
+                                    fill={anomaly ? "#ef4444" : ba.chartLine}
+                                    stroke="#ffffff"
+                                    strokeWidth={2}
+                                  />
+                                )
+                              }}
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
 
-            <Card className="border-emerald-100 bg-white/70 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-emerald-950">Sales by day</CardTitle>
-                <CardDescription className="text-emerald-700">Paginated list (5 rows per page).</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {salesDays.map((row) => (
-                  <div key={row.date} className="rounded-xl border border-emerald-100 bg-white/70 p-3 text-sm">
-                    <p className="font-medium text-emerald-900">{row.date}</p>
-                    <p className="text-emerald-700">
-                      KSh {Math.round(row.revenue).toLocaleString()} • {row.salesCount} sale(s)
-                    </p>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
+                <Card className={adminCardClass}>
+                  <CardHeader className="border-b border-sky-200/80 px-6 py-5 sm:px-8">
+                    <CardTitle className={adminCardTitleClass}>Sales by day</CardTitle>
+                    <CardDescription className="mt-1.5 text-slate-600">
+                      One row per day in the selected range.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3 px-6 py-8 sm:px-8">
+                    {salesDays.length === 0 ? (
+                      <EmptyState
+                        title="No sales in this range"
+                        description="Sales will appear here once transactions are recorded."
+                        icon={<Activity className="h-5 w-5" />}
+                      />
+                    ) : (
+                      salesDays.map((row) => (
+                        <div
+                          key={row.date}
+                          className="flex flex-col justify-between gap-2 rounded-xl border border-sky-200 bg-white px-4 py-4 transition-colors hover:border-sky-200 hover:bg-sky-50/40 sm:flex-row sm:items-center"
+                        >
+                          <p className="font-medium text-slate-900">{row.date}</p>
+                          <p className="text-sm tabular-nums text-slate-600 sm:text-base">
+                            KSh {Math.round(row.revenue).toLocaleString()}
+                            <span className="mx-2 text-sky-300">·</span>
+                            {row.salesCount} sale{row.salesCount === 1 ? "" : "s"}
+                          </p>
+                        </div>
+                      ))
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </OverviewSection>
           </TabsContent>
 
-          <TabsContent value="products" className="mt-0 space-y-6">
-            <Card className="border-emerald-100 bg-white/70 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-emerald-950">Fast Moving Products</CardTitle>
-                <CardDescription className="text-emerald-700">Top sellers in selected range.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {loading ? (
-                  <EmptyState
-                    title="Loading products insights…"
-                    description="Crunching sales by product."
-                    icon={<Boxes className="h-5 w-5" />}
-                    variant="loading"
-                  />
-                ) : null}
-                {(data?.topProducts || []).map((item) => (
-                  <div key={item.id} className="rounded-xl border border-emerald-100 bg-white/60 p-3">
-                    <p className="font-medium text-emerald-950">{item.name}</p>
-                    <p className="text-sm text-emerald-700">
-                      {item.quantitySold} units sold • KSh {Math.round(item.revenue).toLocaleString()}
-                    </p>
-                  </div>
-                ))}
-                {!loading && (!data?.topProducts || data.topProducts.length === 0) ? (
-                  <EmptyState
-                    title="No product sales in this range"
-                    description="When sales happen, your top products will show up here."
-                    icon={<Boxes className="h-5 w-5" />}
-                  />
-                ) : null}
-              </CardContent>
-            </Card>
+          <TabsContent value="inventory" className="mt-0 space-y-4 lg:space-y-6">
+            <OwnerAdminTabIntro
+              eyebrow="Inventory"
+              title="Stock & products"
+              description="Manage catalogue, track fast movers, and resolve low or out-of-stock items."
+            />
+            <Tabs
+              value={inventoryView}
+              onValueChange={(v) => setInventoryView(v as "manage" | "fast-moving" | "stock-alerts")}
+              className="space-y-4 lg:space-y-6"
+            >
+              <OwnerAdminTabStrip tabs={[...INVENTORY_SUB_TABS]} variant="sub" />
 
-            <Card className="border-emerald-100 bg-white/70 backdrop-blur-sm">
-              <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <CardTitle className="text-emerald-950">Low / Out-of-stock products</CardTitle>
-                  <CardDescription className="text-emerald-700">Showing 5 items per page.</CardDescription>
-                </div>
-                <div className="flex gap-2">
-                  <Button variant={stockFilter === "all" ? "default" : "outline"} className={stockFilter === "all" ? "bg-emerald-600 hover:bg-emerald-700" : "border-emerald-200"} onClick={() => setStockTab("all")}>All</Button>
-                  <Button variant={stockFilter === "low" ? "default" : "outline"} className={stockFilter === "low" ? "bg-amber-600 hover:bg-amber-700" : "border-emerald-200"} onClick={() => setStockTab("low")}>Low</Button>
-                  <Button variant={stockFilter === "out" ? "default" : "outline"} className={stockFilter === "out" ? "bg-rose-600 hover:bg-rose-700" : "border-emerald-200"} onClick={() => setStockTab("out")}>Out</Button>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {filteredStockAlerts.map((item) => (
-                  <div key={item.id} className="rounded-xl border border-emerald-100 bg-white/70 p-3">
-                    <p className="font-medium text-emerald-950">{item.name}</p>
-                    <p className="text-sm text-emerald-700">
-                      {item.category} • Qty: {item.quantity} • Reorder: {item.reorderLevel}
-                    </p>
-                  </div>
-                ))}
-                {!loading && filteredStockAlerts.length === 0 ? (
-                  <EmptyState
-                    title="No stock alerts for this filter"
-                    description="Try another filter or continue monitoring inventory."
-                    icon={<Boxes className="h-5 w-5" />}
-                  />
-                ) : null}
-              </CardContent>
-            </Card>
+              <TabsContent value="manage" className="mt-0">
+                <OwnerAdminInventoryPanel />
+              </TabsContent>
+
+              <TabsContent value="fast-moving" className="mt-0">
+                <Card className={adminCardClass}>
+                  <CardHeader>
+                    <CardTitle className={adminCardTitleClass}>Fast moving products</CardTitle>
+                    <CardDescription className={ba.textSecondary}>
+                      Top sellers for {data?.period?.from ?? from} → {data?.period?.to ?? to}.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-3 sm:p-6 lg:p-8">
+                    {loading ? (
+                      <EmptyState
+                        title="Loading sales insights…"
+                        description="Crunching sales by product."
+                        icon={<Boxes className="h-5 w-5" />}
+                        variant="loading"
+                      />
+                    ) : null}
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+                      {(data?.topProducts || []).map((item, index) => (
+                        <div
+                          key={item.id}
+                          className={cn(
+                            "rounded-xl p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md",
+                            ba.card,
+                            "bg-gradient-to-br from-white via-white to-sky-50/60",
+                          )}
+                        >
+                          <div className="flex items-start gap-3">
+                            <span className={ba.rankBadge}>
+                              {index + 1}
+                            </span>
+                            <div className="min-w-0">
+                              <p className="font-semibold text-slate-900">{item.name}</p>
+                              <p className="mt-1 text-sm text-slate-600">
+                                {item.quantitySold} sold • KSh {Math.round(item.revenue).toLocaleString()}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {!loading && (!data?.topProducts || data.topProducts.length === 0) ? (
+                      <EmptyState
+                        title="No product sales in this range"
+                        description="When sales happen, your fastest movers will appear here."
+                        icon={<Boxes className="h-5 w-5" />}
+                      />
+                    ) : null}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="stock-alerts" className="mt-0">
+                <Card className={adminCardClass}>
+                  <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between lg:items-center">
+                    <div>
+                      <CardTitle className={adminCardTitleClass}>Low & out of stock</CardTitle>
+                      <CardDescription className={ba.textSecondary}>
+                        Items that need restocking attention.
+                      </CardDescription>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className={stockFilter === "all" ? ba.btnFilterActive : ba.btnFilterInactive}
+                        onClick={() => setStockTab("all")}
+                      >
+                        All
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className={stockFilter === "low" ? ba.btnFilterLowActive : ba.btnFilterInactive}
+                        onClick={() => setStockTab("low")}
+                      >
+                        Low
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className={stockFilter === "out" ? ba.btnFilterOutActive : ba.btnFilterInactive}
+                        onClick={() => setStockTab("out")}
+                      >
+                        Out
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-3 sm:p-6 lg:p-8">
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+                      {filteredStockAlerts.map((item) => (
+                        <div
+                          key={item.id}
+                          className={cn(
+                            "rounded-xl border p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md",
+                            item.status === "out"
+                              ? "border-rose-200 bg-gradient-to-br from-rose-50/90 to-white"
+                              : "border-amber-200 bg-gradient-to-br from-amber-50/90 to-white",
+                          )}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="font-semibold text-slate-900">{item.name}</p>
+                            <Badge
+                              variant={item.status === "out" ? "destructive" : "outline"}
+                              className={
+                                item.status === "low"
+                                  ? "shrink-0 border-amber-300 bg-amber-100 text-amber-900"
+                                  : "shrink-0"
+                              }
+                            >
+                              {item.status === "out" ? "Out" : "Low"}
+                            </Badge>
+                          </div>
+                          <p className="mt-2 text-sm text-slate-600">{item.category}</p>
+                          <p className={cn("mt-1 text-sm", ba.textSecondary)}>
+                            Qty {item.quantity} • Reorder at {item.reorderLevel}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                    {!loading && filteredStockAlerts.length === 0 ? (
+                      <EmptyState
+                        title="No stock alerts for this filter"
+                        description="Try another filter or continue monitoring inventory."
+                        icon={<Boxes className="h-5 w-5" />}
+                      />
+                    ) : null}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
           </TabsContent>
 
-          <TabsContent value="actions" className="mt-0 space-y-6">
-            <Card className="border-emerald-100 bg-white/70 backdrop-blur-sm">
+          <TabsContent value="actions" className="mt-0 space-y-5 sm:space-y-6">
+            <OwnerAdminTabIntro
+              eyebrow="Actions"
+              title="Business activity"
+              description="Product and inventory changes logged for your selected date range."
+            />
+            <Card className={adminCardClass}>
               <CardHeader>
-                <CardTitle className="text-emerald-950">Business Actions Summary</CardTitle>
-                <CardDescription className="text-emerald-700">Key activity tracked on this account.</CardDescription>
+                <CardTitle className={adminCardTitleClass}>Business Actions Summary</CardTitle>
+                <CardDescription className={ba.textSecondary}>Key activity tracked on this account.</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-2 text-sm text-emerald-800">
+              <CardContent className="space-y-2 text-sm text-slate-800">
                 {loading ? (
                   <EmptyState
                     title="Loading actions…"
@@ -540,20 +826,35 @@ export function BusinessAdminDashboardClient() {
                 ) : null}
 
                 {!loading && (data?.actions.all || 0) > 0 ? (
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-xl border border-emerald-100 bg-white/60 p-4">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-emerald-600">Product activity</p>
-                      <div className="mt-2 space-y-1">
-                        <p>Created: {data?.actions.created || 0}</p>
-                        <p>Edited: {data?.actions.edited || 0}</p>
-                        <p>Deleted: {data?.actions.deleted || 0}</p>
+                  <div className="grid gap-4 sm:grid-cols-2 lg:gap-6">
+                    <div className={cn("p-5 shadow-sm lg:p-6", ba.innerPanel)}>
+                      <p className={cn("text-xs uppercase tracking-wide lg:text-sm", ba.sectionEyebrow)}>Product activity</p>
+                      <div className="mt-3 grid gap-2 text-sm lg:grid-cols-3 lg:gap-4 lg:text-base">
+                        <p className={cn("tabular-nums", ba.statTile)}>
+                          <span className={cn("block text-xs", ba.textAccent)}>Created</span>
+                          {data?.actions.created || 0}
+                        </p>
+                        <p className={cn("tabular-nums", ba.statTile)}>
+                          <span className={cn("block text-xs", ba.textAccent)}>Edited</span>
+                          {data?.actions.edited || 0}
+                        </p>
+                        <p className={cn("tabular-nums sm:col-span-2 lg:col-span-1", ba.statTile)}>
+                          <span className={cn("block text-xs", ba.textAccent)}>Deleted</span>
+                          {data?.actions.deleted || 0}
+                        </p>
                       </div>
                     </div>
-                    <div className="rounded-xl border border-emerald-100 bg-white/60 p-4">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-emerald-600">Stock status</p>
-                      <div className="mt-2 space-y-1">
-                        <p>Low stock products: {stockCounts.low}</p>
-                        <p>Out of stock products: {stockCounts.out}</p>
+                    <div className={cn("p-5 shadow-sm lg:p-6", ba.innerPanel)}>
+                      <p className={cn("text-xs uppercase tracking-wide lg:text-sm", ba.sectionEyebrow)}>Stock status</p>
+                      <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:gap-4">
+                        <p className={cn("text-sm lg:text-base", ba.statTile)}>
+                          <span className={cn("block text-xs", ba.textAccent)}>Low stock</span>
+                          <span className={cn("text-2xl font-semibold tabular-nums", ba.textPrimary)}>{stockCounts.low}</span>
+                        </p>
+                        <p className={cn("text-sm lg:text-base", ba.statTile)}>
+                          <span className={cn("block text-xs", ba.textAccent)}>Out of stock</span>
+                          <span className="text-2xl font-semibold tabular-nums text-rose-700">{stockCounts.out}</span>
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -562,35 +863,47 @@ export function BusinessAdminDashboardClient() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="tips" className="mt-0 space-y-6">
-            <Card className="border-emerald-100 bg-white/70 backdrop-blur-sm">
+          <TabsContent value="tips" className="mt-0 space-y-5 sm:space-y-6">
+            <OwnerAdminTabIntro
+              eyebrow="Tips"
+              title="Smart recommendations"
+              description="Suggestions based on your latest sales and stock performance."
+            />
+            <Card className={adminCardClass}>
               <CardHeader>
-                <CardTitle className="text-emerald-950">Business Tips</CardTitle>
-                <CardDescription className="text-emerald-700">System-generated recommendations from current performance.</CardDescription>
+                <CardTitle className={adminCardTitleClass}>Business Tips</CardTitle>
+                <CardDescription className={ba.textAccent}>System-generated recommendations from current performance.</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-2">
+              <CardContent className="space-y-2 lg:grid lg:grid-cols-2 lg:gap-4 xl:grid-cols-3">
                 {loading ? (
-                  <EmptyState
-                    title="Generating tips…"
-                    description="Analyzing current performance."
-                    icon={<Lightbulb className="h-5 w-5" />}
-                    variant="loading"
-                  />
+                  <div className="lg:col-span-2 xl:col-span-3">
+                    <EmptyState
+                      title="Generating tips…"
+                      description="Analyzing current performance."
+                      icon={<Lightbulb className="h-5 w-5" />}
+                      variant="loading"
+                    />
+                  </div>
                 ) : null}
                 {(data?.tips || []).map((tip, idx) => (
                   <div
                     key={idx}
-                    className="rounded-xl border border-emerald-100 bg-gradient-to-r from-emerald-50 via-white to-sky-50 p-3 text-sm text-emerald-950"
+                    className={cn("flex gap-3 text-sm transition-colors", ba.tipCard)}
                   >
-                    {tip}
+                    <span className={cn("mt-0.5", ba.tipIcon)}>
+                      <Lightbulb className="h-4 w-4" />
+                    </span>
+                    <p className="min-w-0 leading-relaxed">{tip}</p>
                   </div>
                 ))}
                 {!loading && (!data?.tips || data.tips.length === 0) ? (
-                  <EmptyState
-                    title="No tips yet"
-                    description="When there’s enough activity, we’ll surface useful suggestions here."
-                    icon={<Lightbulb className="h-5 w-5" />}
-                  />
+                  <div className="lg:col-span-2 xl:col-span-3">
+                    <EmptyState
+                      title="No tips yet"
+                      description="When there’s enough activity, we’ll surface useful suggestions here."
+                      icon={<Lightbulb className="h-5 w-5" />}
+                    />
+                  </div>
                 ) : null}
               </CardContent>
             </Card>
@@ -602,67 +915,111 @@ export function BusinessAdminDashboardClient() {
   )
 }
 
+function OverviewSection({
+  title,
+  description,
+  children,
+}: {
+  title: string
+  description: string
+  children: React.ReactNode
+}) {
+  return (
+    <section className="space-y-5 sm:space-y-6">
+      <div className="space-y-1 px-0.5">
+        <h3 className={ba.sectionTitle}>{title}</h3>
+        <p className={ba.sectionDesc}>{description}</p>
+      </div>
+      {children}
+    </section>
+  )
+}
+
+function OverviewMetric({
+  label,
+  value,
+  hint,
+  icon,
+  tone = "blue",
+}: {
+  label: string
+  value: string
+  hint: string
+  icon: React.ReactNode
+  tone?: "blue" | "rose"
+}) {
+  const toneChip: Record<string, string> = {
+    blue: ba.kpiBlue.chip,
+    rose: "bg-rose-50 text-rose-700 border border-rose-200",
+  }
+
+  return (
+    <div className={ba.metricCard}>
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0 space-y-2">
+          <p className={cn("text-xs font-semibold uppercase tracking-wider", ba.textAccent)}>{label}</p>
+          <p className={cn("text-2xl font-semibold tracking-tight tabular-nums sm:text-3xl", ba.textPrimary)}>{value}</p>
+          <p className={cn("text-sm leading-relaxed", ba.textSecondary)}>{hint}</p>
+        </div>
+        <span
+          className={cn(
+            "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border",
+            toneChip[tone] ?? toneChip.blue,
+          )}
+        >
+          {icon}
+        </span>
+      </div>
+    </div>
+  )
+}
+
 function TapKpiCard({
   title,
   value,
   sub,
   icon,
-  tone = "emerald",
+  tone = "blue",
 }: {
   title: string
   value: string
   sub: string
   icon: React.ReactNode
-  tone?: "emerald" | "sky" | "violet" | "amber" | "rose"
+  tone?: "blue" | "navy" | "cyan" | "rose"
 }) {
   const toneStyles: Record<string, { ring: string; chip: string; glow: string }> = {
-    emerald: {
-      ring: "ring-emerald-100/70",
-      chip: "bg-emerald-50 text-emerald-700 border-emerald-200",
-      glow: "shadow-[0_18px_50px_-30px_rgba(16,185,129,0.55)]",
-    },
-    sky: {
-      ring: "ring-sky-100/70",
-      chip: "bg-sky-50 text-sky-700 border-sky-200",
-      glow: "shadow-[0_18px_50px_-30px_rgba(14,165,233,0.55)]",
-    },
-    violet: {
-      ring: "ring-violet-100/70",
-      chip: "bg-violet-50 text-violet-700 border-violet-200",
-      glow: "shadow-[0_18px_50px_-30px_rgba(139,92,246,0.55)]",
-    },
-    amber: {
-      ring: "ring-amber-100/70",
-      chip: "bg-amber-50 text-amber-800 border-amber-200",
-      glow: "shadow-[0_18px_50px_-30px_rgba(245,158,11,0.5)]",
-    },
+    blue: ba.kpiBlue,
+    navy: ba.kpiNavy,
+    cyan: ba.kpiCyan,
     rose: {
       ring: "ring-rose-100/70",
       chip: "bg-rose-50 text-rose-700 border-rose-200",
-      glow: "shadow-[0_18px_50px_-30px_rgba(244,63,94,0.45)]",
+      glow: "shadow-[0_18px_50px_-30px_rgba(244,63,94,0.35)]",
     },
   }
-  const t = toneStyles[tone] ?? toneStyles.emerald
+  const t = toneStyles[tone] ?? toneStyles.blue
 
   return (
-    <button
-      type="button"
+    <div
       className={cn(
-        "w-full rounded-2xl border border-emerald-100 bg-white/70 p-4 text-left backdrop-blur-sm transition active:scale-[0.99] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60",
-        "ring-1",
+        "owner-admin-card w-full rounded-2xl border p-4 text-left transition-all duration-200 ring-1 hover:-translate-y-0.5 lg:p-5",
+        ba.surface,
+        ba.border,
         t.ring,
         t.glow,
       )}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-600">{title}</p>
-          <p className="mt-1 text-2xl font-semibold tracking-tight text-emerald-950 tabular-nums">{value}</p>
-          <p className="mt-1 text-sm text-emerald-700">{sub}</p>
+      <div className="flex items-start justify-between gap-3 lg:gap-4">
+        <div className="min-w-0 flex-1">
+          <p className={cn("text-[11px] font-semibold uppercase tracking-wider sm:text-xs", ba.textAccent)}>{title}</p>
+          <p className={cn("mt-1 text-xl font-semibold tracking-tight tabular-nums sm:text-2xl lg:text-3xl", ba.textPrimary)}>{value}</p>
+          <p className={cn("mt-1 text-xs leading-relaxed sm:text-sm lg:text-[15px]", ba.textSecondary)}>{sub}</p>
         </div>
-        <span className={cn("inline-flex shrink-0 items-center justify-center rounded-xl border px-3 py-2", t.chip)}>{icon}</span>
+        <span className={cn("inline-flex shrink-0 items-center justify-center rounded-xl border p-2.5 sm:px-3 sm:py-2 lg:p-3", t.chip)}>
+          {icon}
+        </span>
       </div>
-    </button>
+    </div>
   )
 }
 
@@ -678,19 +1035,12 @@ function EmptyState({
   variant?: "empty" | "loading"
 }) {
   return (
-    <div className="rounded-2xl border border-emerald-100 bg-gradient-to-br from-white/70 via-emerald-50/40 to-sky-50/40 p-5 text-emerald-950 shadow-sm ring-1 ring-white/40 backdrop-blur-sm">
-      <div className="flex items-start gap-3">
-        <div
-          className={cn(
-            "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-emerald-200 bg-white/70 text-emerald-700",
-            variant === "loading" && "animate-pulse",
-          )}
-        >
-          {icon}
-        </div>
+    <div className={ba.emptyState}>
+      <div className="flex flex-col items-center gap-3 text-center sm:flex-row sm:items-start sm:text-left">
+        <div className={cn(ba.emptyStateIcon, variant === "loading" && "animate-pulse")}>{icon}</div>
         <div className="min-w-0">
-          <p className="text-sm font-semibold">{title}</p>
-          <p className="mt-1 text-sm text-emerald-700">{description}</p>
+          <p className={cn("text-sm font-semibold", ba.textPrimary)}>{title}</p>
+          <p className={cn("mt-1 text-sm leading-relaxed", ba.textSecondary)}>{description}</p>
         </div>
       </div>
     </div>

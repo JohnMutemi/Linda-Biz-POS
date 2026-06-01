@@ -18,9 +18,15 @@ export function WhatsAppWidget() {
     setIsAuthenticated(Boolean(user))
   }, [])
 
-  const protectedArea = ["/dashboard", "/products", "/sales", "/settings", "/profile", "/admin"].some((route) =>
-    pathname.startsWith(route),
-  )
+  const protectedArea = [
+    "/dashboard",
+    "/products",
+    "/sales",
+    "/settings",
+    "/profile",
+    "/admin",
+    "/business-admin",
+  ].some((route) => pathname.startsWith(route))
   if (isAuthenticated || protectedArea) {
     return null
   }
