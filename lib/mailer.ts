@@ -98,6 +98,12 @@ export function buildPasswordResetUrl(token: string, email: string, fallbackOrig
   return `${baseUrl}/reset-password?${params.toString()}`
 }
 
+export function buildBusinessAdminPasswordResetUrl(token: string, email: string, fallbackOrigin?: string) {
+  const baseUrl = getBaseUrl(fallbackOrigin).replace(/\/+$/, "")
+  const params = new URLSearchParams({ token, email })
+  return `${baseUrl}/business-admin/recover-password?${params.toString()}`
+}
+
 export function buildOwnerAdminLoginUrl(email: string, fallbackOrigin?: string) {
   const baseUrl = getBaseUrl(fallbackOrigin).replace(/\/+$/, "")
   const params = new URLSearchParams({ email })
@@ -302,6 +308,65 @@ export async function sendBusinessAdminCredentialsEmail({
       <p>For security, you will be asked to set a new password after you sign in.</p>
       <p>If the button does not work, copy this link:</p>
       <p><a href="${ownerAdminLoginUrl}">${ownerAdminLoginUrl}</a></p>
+    </div>
+  `
+
+  const transporter = nodemailer.createTransport({
+    host: smtpHost,
+    port: smtpPort,
+    secure: smtpSecure,
+    auth: {
+      user: smtpUser,
+      pass: smtpPass,
+    },
+  })
+
+  try {
+    await transporter.sendMail({
+      from: `${fromName} <${fromEmail}>`,
+      to,
+      subject,
+      html,
+    })
+  } catch (error) {
+    return {
+      sent: false,
+      reason: error instanceof Error ? `SMTP send failed: ${error.message}` : "SMTP send failed.",
+    }
+  }
+
+  return { sent: true as const }
+}
+
+export async function sendBusinessAdminPasswordResetEmail({ to, recipientName, resetUrl }: PasswordResetEmailInput) {
+  const smtpHost = process.env.SMTP_HOST
+  const smtpPort = Number(process.env.SMTP_PORT || "587")
+  const smtpSecure = String(process.env.SMTP_SECURE || "false").toLowerCase() === "true"
+  const smtpUser = process.env.SMTP_USER
+  const smtpPass = process.env.SMTP_PASS
+  const fromEmail = process.env.EMAIL_FROM_EMAIL || process.env.AUTH_FROM_EMAIL || smtpUser
+  const fromName = process.env.EMAIL_FROM_NAME || "LindaBiz Support"
+
+  if (!smtpHost || !smtpPort || !smtpUser || !smtpPass || !fromEmail) {
+    return {
+      sent: false,
+      reason: "SMTP provider not configured. Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, and EMAIL_FROM_EMAIL.",
+    }
+  }
+
+  const subject = "Reset your LindaBiz business admin password"
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #0f172a;">
+      <h2 style="color: #1d4ed8;">Hi ${recipientName},</h2>
+      <p>We received a request to reset your <strong>business admin</strong> password.</p>
+      <p style="margin: 24px 0;">
+        <a href="${resetUrl}" style="background: #2563eb; color: #ffffff; padding: 12px 18px; border-radius: 8px; text-decoration: none; display: inline-block;">
+          Reset Business Admin Password
+        </a>
+      </p>
+      <p>If the button does not work, copy this URL:</p>
+      <p><a href="${resetUrl}">${resetUrl}</a></p>
+      <p style="margin-top: 24px; font-size: 12px; color: #475569;">If you did not request this reset, you can ignore this email. Your main account password is unchanged.</p>
     </div>
   `
 

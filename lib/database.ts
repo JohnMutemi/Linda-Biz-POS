@@ -44,7 +44,9 @@ export async function initDatabase() {
       owner_admin_password TEXT,
       owner_admin_must_reset BOOLEAN NOT NULL DEFAULT TRUE,
       owner_admin_enabled_at TIMESTAMPTZ,
-      owner_admin_issued_at TIMESTAMPTZ
+      owner_admin_issued_at TIMESTAMPTZ,
+      owner_admin_password_reset_token_hash TEXT,
+      owner_admin_password_reset_expires_at TIMESTAMPTZ
     )
   `
 
@@ -64,6 +66,8 @@ export async function initDatabase() {
   await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS owner_admin_must_reset BOOLEAN NOT NULL DEFAULT TRUE`
   await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS owner_admin_enabled_at TIMESTAMPTZ`
   await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS owner_admin_issued_at TIMESTAMPTZ`
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS owner_admin_password_reset_token_hash TEXT`
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS owner_admin_password_reset_expires_at TIMESTAMPTZ`
 
   const adminEmails = Array.from(getAdminEmails())
   const adminSeedPassword = process.env.ADMIN_DEFAULT_PASSWORD

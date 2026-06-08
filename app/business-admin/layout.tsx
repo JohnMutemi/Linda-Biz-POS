@@ -10,7 +10,11 @@ import { OwnerAdminSidebar } from "@/components/dashboard/owner-admin-sidebar"
 import { businessAdminTheme as t } from "@/lib/business-admin-theme"
 import { cn } from "@/lib/utils"
 
-const AUTH_ROUTES = new Set(["/business-admin/login", "/business-admin/reset-password"])
+const AUTH_ROUTES = new Set([
+  "/business-admin/login",
+  "/business-admin/reset-password",
+  "/business-admin/recover-password",
+])
 
 export default function BusinessAdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()

@@ -44,12 +44,17 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     const loadUser = async () => {
       try {
         const isAdminLoginRoute = pathname === "/admin/login"
-        const isBusinessAdminLoginRoute = pathname === "/business-admin/login"
+        const isBusinessAdminPublicRoute =
+          pathname === "/business-admin/login" ||
+          pathname === "/business-admin/reset-password" ||
+          pathname === "/business-admin/recover-password"
         // Only check for user authentication on protected routes.
-        // Keep /admin/login public so admins can sign in.
+        // Keep auth/recovery pages public so users can sign in or reset passwords.
         const protectedRoutes = ["/dashboard", "/products", "/sales", "/settings", "/profile", "/admin", "/business-admin"]
         const isProtectedRoute =
-          !isAdminLoginRoute && !isBusinessAdminLoginRoute && protectedRoutes.some((route) => pathname.startsWith(route))
+          !isAdminLoginRoute &&
+          !isBusinessAdminPublicRoute &&
+          protectedRoutes.some((route) => pathname.startsWith(route))
 
         if (!isProtectedRoute) {
           setLoading(false)
@@ -71,10 +76,15 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
       } catch (error) {
         console.error("Error loading user data:", error)
         const isAdminLoginRoute = pathname === "/admin/login"
-        const isBusinessAdminLoginRoute = pathname === "/business-admin/login"
+        const isBusinessAdminPublicRoute =
+          pathname === "/business-admin/login" ||
+          pathname === "/business-admin/reset-password" ||
+          pathname === "/business-admin/recover-password"
         const protectedRoutes = ["/dashboard", "/products", "/sales", "/settings", "/profile", "/admin", "/business-admin"]
         const isProtectedRoute =
-          !isAdminLoginRoute && !isBusinessAdminLoginRoute && protectedRoutes.some((route) => pathname.startsWith(route))
+          !isAdminLoginRoute &&
+          !isBusinessAdminPublicRoute &&
+          protectedRoutes.some((route) => pathname.startsWith(route))
         if (isProtectedRoute) {
           router.push("/")
         }
@@ -86,7 +96,18 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     void loadUser()
   }, [router, pathname])
 
+  const getLogoutRedirect = () => {
+    if (pathname.startsWith("/business-admin")) {
+      return "/business-admin/login"
+    }
+    if (pathname.startsWith("/admin")) {
+      return "/admin/login"
+    }
+    return "/"
+  }
+
   const logout = async () => {
+    const redirectTo = getLogoutRedirect()
     try {
       await fetch("/api/auth/logout", { method: "POST" })
     } catch (error) {
@@ -98,7 +119,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
         title: "Logged out successfully",
         description: "You have been logged out of your account.",
       })
-      router.push("/")
+      router.push(redirectTo)
     }
   }
 

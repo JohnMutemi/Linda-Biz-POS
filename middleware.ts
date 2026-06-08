@@ -39,6 +39,7 @@ export async function middleware(request: NextRequest) {
   const isAdminLoginRoute = pathname === "/admin/login"
   const isBusinessAdminLoginRoute = pathname === "/business-admin/login"
   const isBusinessAdminResetRoute = pathname === "/business-admin/reset-password"
+  const isBusinessAdminRecoverRoute = pathname === "/business-admin/recover-password"
   const isProtectedRoute =
     pathname.startsWith("/dashboard") ||
     pathname.startsWith("/products") ||
@@ -46,7 +47,11 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/settings") ||
     pathname.startsWith("/profile")
   const isAdminRoute = pathname.startsWith("/admin") && !isAdminLoginRoute
-  const isBusinessAdminRoute = pathname.startsWith("/business-admin") && !isBusinessAdminLoginRoute && !isBusinessAdminResetRoute
+  const isBusinessAdminRoute =
+    pathname.startsWith("/business-admin") &&
+    !isBusinessAdminLoginRoute &&
+    !isBusinessAdminResetRoute &&
+    !isBusinessAdminRecoverRoute
 
   // If the user is not logged in and trying to access protected routes, redirect to login
   if (!isAuthenticated && (isProtectedRoute || isAdminRoute || isBusinessAdminRoute)) {
@@ -56,7 +61,14 @@ export async function middleware(request: NextRequest) {
   }
 
   // Force password reset for business-admin accounts on first login (or when re-issued).
-  if (isAuthenticated && isBusinessAdminPanel && ownerAdminMustReset && pathname.startsWith("/business-admin") && !isBusinessAdminResetRoute) {
+  if (
+    isAuthenticated &&
+    isBusinessAdminPanel &&
+    ownerAdminMustReset &&
+    pathname.startsWith("/business-admin") &&
+    !isBusinessAdminResetRoute &&
+    !isBusinessAdminRecoverRoute
+  ) {
     return NextResponse.redirect(new URL("/business-admin/reset-password", request.url))
   }
   if (isAdminLoginRoute && isAuthenticated && isAdmin) {

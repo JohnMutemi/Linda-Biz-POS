@@ -1,10 +1,20 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { Toast, ToastClose, ToastDescription, ToastProvider, ToastTitle, ToastViewport } from "@/components/ui/toast"
 import { useToast } from "@/components/ui/use-toast"
 
 export function Toaster() {
   const { toasts } = useToast()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  // Defer portal markup until after hydration so browser extensions cannot
+  // inject attributes (e.g. bis_skin_checked) into SSR HTML and trigger mismatches.
+  if (!mounted) return null
 
   return (
     <ToastProvider>
